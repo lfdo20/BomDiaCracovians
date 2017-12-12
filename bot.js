@@ -29,7 +29,7 @@ bot.onText(/^^(bom\sdia\s)((.+))$/, function (msg, match) {
 //var name3 = match[3];
   var bd1 = 'seus merda';
 
-  bot.sendMessage(msg.chat.id, 'bom dia :' + name1+'/ '+name2 + '!').then(function () {
+  bot.sendMessage(msg.chat.id, 'bom dia Nessa'  + '!').then(function () {
     // reply sent!
   });
 });
