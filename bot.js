@@ -4,8 +4,8 @@ var Bot = require('node-telegram-bot-api'),
     bot = new Bot(token, { polling: true });
 var fs = require('fs');
 
-let bddata={}, newBdia, latebomdia=[' ', ' ', ' ', ' ', ' '];
-//= {   "bomdia": []};
+let bddata={}, newBdia;
+//, latebomdia=[' ', ' ', ' ', ' ', ' ']
 
 console.log('bot server started...');
 startRead();
@@ -13,13 +13,11 @@ startRead();
 function startRead(){
     bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
     console.log('Data Read : '+bddata.bomdia.length+' bom dias.');
-    console.log(bddata);
+    //console.log(bddata);
 }
 
-
-bot.onText(/^\/bdcstatus (.+)$/, function (msg, match) {
-  var name = match[1];
-  bot.sendMessage(msg.chat.id, 'Então '+name+' nós temos '+bddata.bomdia.length+' bom dias.').then(function () {
+bot.onText(/^\/bdcstatus$/, function (msg, match) {
+  bot.sendMessage(msg.chat.id, 'Nós temos '+bddata.bomdia.length+' bom dias.').then(function () {
     // reply sent!
   });
 });
@@ -35,110 +33,89 @@ bot.onText(/^\/bdcsum((\s+\d+)+)$/, function (msg, match) {
   });
 });
 
-//console.log(bddata);
-// var rnum = Math.floor(Math.random() * bddata.bomdia.length);
-// console.log(rnum);
 
-bot.onText(/^^(bom\sdia\s)((.+))$/, function (msg, match) {
+// bot.onText(/^(bom\s+dia+\s?)/gi, function (msg, match) {
+//   var mat = match[2];
+//   var mat1 = match[1];
+//   console.log(mat);
+//   if (mat !== undefined) {
+//     var result = "Que bom dia o quê, não é assim que damos bom dia por aqui.."+'\n'+"É assim:  Bom dia seus adoradores de crushs inatingíveis";
+//   }else{
+//     return;
+//   }
+//   bot.sendMessage(msg.chat.id, result).then(function () {
+//     // reply sent!
+//   });
+// });
+
+
+bot.onText(/^(bom\s+dia+\s?)((.+)?)$/gi, function (msg, match) {
   newBdia = match[2];
   var bdiaback;
-  // verifica se já existe no banco
-  console.log(newBdia);
-  // var existe = bddata.bomdia.find(function(str){
-  //   if (str === newBdia) {
-  //     console.log('Bom dia existente');
-  //     return false;
-  //   }
-  // });
-  // verifica se já existe nos recentes
-  // var existe2 = newbddata.find(function(str){
-  //   if (str === newBdia) {
-  //     console.log('Bom dia existente');
-  //     return false;
-  //   }
-  // });
-  //console.log(existe, existe2);
-  // insere no banco de novos
-  // if (existe===undefined) {
-  //   newbddata.push(newBdia);
-  // }
-  //console.log(newbddata);
-  // adiciona no banco de recentes
-  // verifica se não foi usado recentemente e retorna o valor
-  for (var i = 0; i < bddata.bomdia.length; i++) {
-    var rnum = Math.floor(Math.random() * bddata.bomdia.length);
-    var lbd = latebomdia.findIndex(function(str){
-      if (str === bddata.bomdia[rnum]) {
-        return true;
-      }else{
-        return false;
+  //console.log(newBdia);
+
+  // check se o bom dia foi dado corretamente
+  console.log(newBdia, match[2]);
+  if (newBdia === '') {
+    var bdiaback = "Que bom dia o quê, não é assim que damos bom dia por aqui.. É assim:  Bom dia seus adoradores de crushs inatingíveis";
+  }else{
+
+    // verifica se não foi usado recentemente e retorna o valor
+    for (var i = 0; i < bddata.bomdia.length; i++) {
+      var rnum = Math.floor(Math.random() * bddata.bomdia.length);
+      var lbd = bddata.latebomdia.findIndex(function(str){
+        if (str === bddata.bomdia[rnum]) {
+          return true;
+        }else{
+          return false;
+        }
+      });
+      if (lbd === -1){
+        i=bddata.bomdia.length;
+        bdiaback = bddata.bomdia[rnum];
       }
-    });
-    if (lbd === -1){
-      i=bddata.bomdia.length;
-      bdiaback = bddata.bomdia[rnum];
     }
 
+    //Armazena ultimo bom dia given
+    bddata.latebomdia.shift();
+    bddata.latebomdia.push(bdiaback);
+    //console.log(latebomdia);
   }
-  latebomdia.shift();
-  latebomdia.push(bdiaback);
-  console.log(latebomdia);
-
-
   bot.sendMessage(msg.chat.id, 'bom dia '+bdiaback+'!').then(function () {
     // reply sent!
     checkBdData(newBdia);
   });
 });
 
-function checkBdData(newBdia){
-    //setInterval(function(){
-      //if (newbddata.length > 0) {
-        //fs.readFile('data.json', 'utf8', function readCheckFileCallback(err, data){
-          var oldData = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
-          console.log(oldData.bomdia.length);
-          //if (oldData.bomdia.length < (bddata.bomdia.length + newbddata.length)) {
 
-          var existe = bddata.bomdia.findIndex(function(elem){
-            //console.log(elem, newBdia);
-            if (elem === newBdia){
-            //  console.log('Bom dia existente.');
-              return true;
-            }else{
-            //  console.log('não existe');
-              return false;
-            }
-          });
-          console.log(existe);
-          if (existe === -1) {
-            oldData.bomdia.push(newBdia);
-            bddata.bomdia.push(newBdia);
-          }
-            // for (var i = 0; i < bddata.bomdia.length; i++) {
-            //   if (bddata.bomdia[i]!==newBdia) {
-            //
-            //   }
-            //
-            // }
-            //newbddata =[];
-          //}
-        //});
-        saveNewdata(bddata);
-      //}
-  //  },60000 * 180);
+function checkBdData(newBdia){
+  // lê o arquivo de bom dias
+  var oldData = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
+  //console.log(oldData.bomdia.length);
+
+  // checa se o bom dia recebido já existe no banco
+  var existe = bddata.bomdia.findIndex(function(elem){
+    // console.log(elem, newBdia);
+    if (elem === newBdia){
+    // console.log('Bom dia existente.');
+      return true;
+    }else{
+    // console.log('não existe');
+      return false;
+    }
+  });
+  //console.log(existe);
+  // Adiciona bom dia no banco de bom dias
+  if (existe === -1) {
+    //oldData.bomdia.push(newBdia);
+    bddata.bomdia.push(newBdia);
+  }
+saveNewdata(bddata);
 }
 
 
-
+// sava arquivo json com bom dias
 function saveNewdata(bddata){
-  //fs.readFile('data.json', 'utf8', function readSaveFileCallback(err, data){
-      //if (err){
-      //    console.log(err);
-    //  } else {
-      //var tempbddata = JSON.parse(data); //now it an object
-      //bddata.bomdia.push({id: 2, square:3}); //add some data
       let json = JSON.stringify(bddata, null, 2);
-      //var json = JSON.stringify(bddata); //convert it back to json
       fs.writeFileSync('data.json', json, 'utf8');
-  //}});
 }
