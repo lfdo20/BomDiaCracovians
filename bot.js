@@ -45,11 +45,9 @@ startRead();
 
 function startRead(){
     //bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
-
   dbx.sharingGetSharedLinkFile({ url: 'https://www.dropbox.com/s/v41eatqgawwso3z/data.json' })
       .then(function (data) {
         //console.log(data);
-
         //console.log();
         fs.writeFileSync(data.name, data.fileBinary, 'binary', function (err) {
           if (err) { throw err; }else{
@@ -89,7 +87,7 @@ bot.onText(/^(bom\s+dia+\s?)((.+)?)$/gi, function (msg, match) {
   // checa por arrobas que não podem
   var notBdiarx = /^(.+)(\@\w+)(.+)$/gi;
   var notBdia = newBdia.match(/(\@)/gi, '$1');
-  console.log(notBdia);
+  //console.log(notBdia);
 
   // check se o bom dia foi dado corretamente
   console.log(newBdia);
@@ -114,6 +112,7 @@ bot.onText(/^(bom\s+dia+\s?)((.+)?)$/gi, function (msg, match) {
       i=bddata.bomdia.length;
       bdiaback = bddata.bomdia[rnum]+'!';
       newBdiaCount +=1;
+      console.log(newBdiaCount);
     }
   }
 
@@ -122,7 +121,7 @@ bot.onText(/^(bom\s+dia+\s?)((.+)?)$/gi, function (msg, match) {
   bddata.latebomdia.push(bdiaback);
   bddata.latebomdia.shift();
   bddata.latebomdia.push(newBdia);
-  console.log(bddata.latebomdia);
+  //console.log(bddata.latebomdia);
   }
   bot.sendMessage(msg.chat.id, 'bom dia '+bdiaback).then(function () {
     checkBdData(newBdia);
@@ -131,11 +130,6 @@ bot.onText(/^(bom\s+dia+\s?)((.+)?)$/gi, function (msg, match) {
 
 
 function checkBdData(newBdia){
-  // lê o arquivo de bom dias
-  //var oldData = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
-  //console.log(oldData.bomdia.length);
-
-  console.log(newBdiaCount);
   // checa se o bom dia recebido já existe no banco
   var existe = bddata.bomdia.findIndex(function(elem){
     // console.log(elem, newBdia);
@@ -145,13 +139,9 @@ function checkBdData(newBdia){
       return false;
     }
   });
-  //console.log(existe);
 
   // Adiciona bom dia no banco de bom dias
   if (existe === -1) {
-    //oldData.bomdia.push(newBdia);
-
-    console.log(newBdiaCount);
     bddata.bomdia.push(newBdia);
   }
   if (newBdiaCount > 10){
