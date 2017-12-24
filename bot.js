@@ -1,16 +1,16 @@
 var fs = require('fs');
 
 // Telegram api config
-  var token = '501638485:AAG_WSsAYnbLjBoLXVGyhGH5P2mQOvYtqUw';
+  var token = 'Bot_Token';
   var Bot = require('node-telegram-bot-api'),
       bot = new Bot(token, { polling: true });
 
 
 // Dropbox Config
   var Dropbox         = require('dropbox');
-  var DROPBOX_APP_KEY    = "frw7yuri1cmb9ar";
-  var DROPBOX_APP_SECRET = "7iyz64huesd582l";
-  var THE_TOKEN = 'KDvGvrJ5lu4AAAAAAAAOewS1FKVR1aXR5BU2KPH9vJ4VfRIkxHw1j0_RwjYHJf3T';
+  var DROPBOX_APP_KEY    = "drop_app_key";
+  var DROPBOX_APP_SECRET = "drop_app_secret"; 
+  var THE_TOKEN = 'dropbox_token';
 
   var dbx = new Dropbox({
     key: DROPBOX_APP_KEY,
