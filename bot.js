@@ -1,16 +1,16 @@
 var fs = require('fs');
 
 // Telegram api config
-  var token = 'Bot_Token';
+  var token = '501638485:AAG_WSsAYnbLjBoLXVGyhGH5P2mQOvYtqUw';
   var Bot = require('node-telegram-bot-api'),
       bot = new Bot(token, { polling: true });
 
 
 // Dropbox Config
   var Dropbox         = require('dropbox');
-  var DROPBOX_APP_KEY    = "drop_app_key";
-  var DROPBOX_APP_SECRET = "drop_app_secret";
-  var THE_TOKEN = 'dropbox_token';
+  var DROPBOX_APP_KEY    = "frw7yuri1cmb9ar";
+  var DROPBOX_APP_SECRET = "7iyz64huesd582l";
+  var THE_TOKEN = 'KDvGvrJ5lu4AAAAAAAAOewS1FKVR1aXR5BU2KPH9vJ4VfRIkxHw1j0_RwjYHJf3T';
 
   var dbx = new Dropbox({
     key: DROPBOX_APP_KEY,
@@ -99,19 +99,20 @@ startRead();
 
 // listen de bom dias
 ///^(bom\s+dia+\s?)((.+)?)$/gi
-    var bdrx = /^((b(\w)+)(\s?)(d\w+))(\s?|\.+|,|!)(\s)(.+)?$/gi;
-    bot.onText(bdrx, function (msg, match) {
+  var bdrx = /^((b(\w)+)(\s?)(d\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi;
+  bot.onText(bdrx, function (msg, match) {
     newbdv = match[1];
     newptv = match[6];
     newBdia = match[8];
     var bdiaback;
-
-    // checa por arrobas que não podem
-    var notBdia = newBdia.match(/(\@)/gi, '$1');
-
-    // check se o bom dia foi dado corretamente
     console.log(newBdia);
-    if (newBdia === '') {
+    // checa por arrobas que não podem
+    if (newBdia !== undefined) {
+      var notBdia = newBdia.match(/(\@)/gi, '$1');
+    }
+    // check se o bom dia foi dado corretamente
+
+    if (newBdia === undefined) {
       newBomDia();
       saveLastSay();
       // var bdiaback = "Que bom dia o quê, não é assim que damos bom dia por aqui.. É assim:  Bom dia seus adoradores de crushs inatingíveis";
@@ -123,48 +124,47 @@ startRead();
       saveLastListen();
     }
 
-      // Gera um bom dia ramdom do banco e vê se não é igual aos últimos falados.
-      function newBomDia(){
-        for (var i = 0; i < bddata.bomdia.length; i++) {
-          var bdnum = Math.floor(Math.random() * bddata.bomdia.length);
-          var bdvnum = Math.floor(Math.random() * bddata.bdiasvar.length);
-          var ptvnum = Math.floor(Math.random() * bddata.pontosvar.length);
-          var lbds = bddata.latebdsay.findIndex(function(str){
-            if (str === bddata.bomdia[bdnum]) {
-              return true;
-            }else{
-              return false;
-            }
-          });
-          var lbdr = bddata.latebdreceived.findIndex(function(str){
-            if (str === bddata.bomdia[bdnum]) {
-              return true;
-            }else{
-              return false;
-            }
-          });
-          if (lbds === -1 && lbdr === -1){
-            i=bddata.bomdia.length;
-            bdiaback = bddata.bdiasvar[bdvnum] + bddata.pontosvar[ptvnum] + bddata.bomdia[bdnum];
+    // Gera um bom dia ramdom do banco e vê se não é igual aos últimos falados.
+    function newBomDia(){
+      for (var i = 0; i < bddata.bomdia.length; i++) {
+        var bdnum = Math.floor(Math.random() * bddata.bomdia.length);
+        var bdvnum = Math.floor(Math.random() * bddata.bdiasvar.length);
+        var ptvnum = Math.floor(Math.random() * bddata.pontosvar.length);
+        var lbds = bddata.latebdsay.findIndex(function(str){
+          if (str === bddata.bomdia[bdnum]) {
+            return true;
+          }else{
+            return false;
           }
+        });
+        var lbdr = bddata.latebdreceived.findIndex(function(str){
+          if (str === bddata.bomdia[bdnum]) {
+            return true;
+          }else{
+            return false;
+          }
+        });
+        if (lbds === -1 && lbdr === -1){
+          i=bddata.bomdia.length;
+          bdiaback = bddata.bdiasvar[bdvnum] + bddata.pontosvar[ptvnum] + bddata.bomdia[bdnum];
         }
       }
+    }
 
-      //Armazena ultimo bom dia falado
-      function saveLastSay(){
-        bddata.latebdsay.shift();
-        bddata.latebdsay.push(bdiaback);
-      }
+    //Armazena ultimo bom dia falado
+    function saveLastSay(){
+      bddata.latebdsay.shift();
+      bddata.latebdsay.push(bdiaback);
+    }
 
-      //Armazena ultimo bom dia recebido
-      function saveLastListen(){
-        bddata.latebdreceived.shift();
-        bddata.latebdreceived.push(newBdia);
-        //console.log(bddata.latebomdia);
-        checkBdData(newBdia);
-        checkBdvData(newbdv);
-      }
-
+    //Armazena ultimo bom dia recebido
+    function saveLastListen(){
+      bddata.latebdreceived.shift();
+      bddata.latebdreceived.push(newBdia);
+      //console.log(bddata.latebomdia);
+      checkBdData(newBdia);
+      checkBdvData(newbdv);
+    }
 
     bot.sendMessage(msg.chat.id, bdiaback).then(function () {
     });
