@@ -1,7 +1,5 @@
 var fs = require('fs');
 var moment = require('moment');
-//const Pornsearch = require('pornsearch').default;
-var nowDay = moment().format('ddd');
 
 // Telegram api config
   var token = '501638485:AAG_WSsAYnbLjBoLXVGyhGH5P2mQOvYtqUw';
@@ -14,7 +12,8 @@ var nowDay = moment().format('ddd');
   let gifdata={
     'newgif':[],
     'ckdgif':[]
-  }
+  };
+  var nowDay = moment().format('ddd');
 
 // Dropbox Config
   var Dropbox         = require('dropbox');
@@ -29,50 +28,16 @@ var nowDay = moment().format('ddd');
     sandbox: false
   });
 
-// Giphy API Config
-var GphApiClient = require('giphy-js-sdk-core');
-client = GphApiClient("8APZlCqqysEkAXkybAroVoTZi5tGVBuS");
-
-var gfl='3', gfrate= 'r', gfq = 'sexy ass';
-/// Gif Search
-function gfsearch(){
-client.search('gifs', {"q": gfq, 'limit': gfl, 'rating': gfrate})
-  .then((response) => {
-    response.data.forEach((gifObject) => {
-      console.log(gifObject)
-    })
-  })
-  .catch((err) => {
-
-  });
-}
-
-var gfrandtag = 'sexy', gfrresp;
-/// Random Gif
-function gfrandom(gfrandtag, response){
-client.random('gifs', {'tag': gfrandtag, 'rating': gfrate})
-  .then((response) => {
-    gfrresp = response;
-  })
-  .catch((err) => {
-
-  });
-}
-
-
 // Seção de Notas
   // IDEA: detectar pontos e utilizar eles aleatoriamente ou decididamente: "Bomdia! ..." "Bom dia, ..." "Bom dia ? ..."
   // IDEA: ignorar frases com @ para não taguear pessoas, Deixar um aviso que não pode.
   // IDEA: organizar como o bot será utilizado em vários grupos: arquivos diferentes ? mesclar bases de dados ?
   // IDEA: json não trabalha com "" dá problema, tem que converter regex pra detectar : (.+)(')(.+)(')(.+)?
 
-
-
 console.log('bot server started...');
 startRead();
 
 // pega o arquivo no dropbox e transforma em objeto
-
   function startRead(){
       //bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
     for (let id of dropfilesurl) {
@@ -95,9 +60,7 @@ startRead();
             throw err;
           });
     }
-
   }
-
 
 // comando para iamgem do dia
   bot.onText(/^\/bdcdia$|^\/bdcdia@bomdiacracobot$/, function (msg, match) {
@@ -134,11 +97,6 @@ startRead();
     });
   });
 
-
-//
-
-
-
 // Recebimento de gifs putaria
   bot.on('document', (msg) => {
     //nowDay === 'Fri' &&
@@ -157,29 +115,9 @@ startRead();
     });
   });
 
-// possivel random gif searcher / translator
-  // client.random('gifs', {'tag': gfrandtag, 'rating': gfrate})
-  //   .then((response) => {
-  //     gfurl=response;
-  //     console.log(gfurl.data.url);
-  //     gfurl=gfurl.data.url;
-  // bot.sendDocument(msg.chat.id, gfurl).then(function () {
-  //   // reply sent!
-  // });
-  //});
-
-// pornhub gif scraper
-// Pornsearch.search(gfrandtag)
-//   .gifs(1)
-//   .then(gifs => {
-//     //console.log(gifs.map(gif => gif.url));
-//     gifs.map(gif => gfdata.push(gif.url));
-//     console.log(gifs, gfdata, gfdata.length);
-//     var gifnum = Math.floor(Math.random() * gfdata.length);
-//     gfurl = gfdata[gifnum]
-
 // tumblr rssgif links scrapper
 ///(\<img src\=\")(h\S+gif(?!\"\/\<br))("\/\>)/gi
+
 // comando para Hoje é dia quê
     var hjmessage, hjdiarx = /^(\w+(?=\s)\s)?((hoje|hj)|(que|q))?(.{3}|.)?((dia)|(hoje|hj)|(que|q))(.{4}|.{3})((dia)|(hoje|hj)|(que|q))$/gi;
     bot.onText(hjdiarx, function (msg, match) {
@@ -384,8 +322,6 @@ startRead();
       newBdiaCount=0;
     }
   }
-
-
 
 // sava arquivo json com bom dias no dropbox a cada 10 novos
   function saveNewdata(dataVar){
