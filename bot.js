@@ -123,8 +123,8 @@ startRead();
     bot.onText(hjdiarx, function (msg, match) {
       var tp1 = match[6]; //dia
       var tp2 = match[11] // q que ou hoje
-      console.log(tp1, tp2, tp2===('q'||'que'||'hoje'||'hj') );
-      if (tp1==='dia' && tp2===('q'||'que'||'hoje'||'hj')) {
+      console.log(tp1, tp2 );
+      if (tp1==='dia' && tp2.match(/^(q|que|hoje|hj)$/)) {
         switch (nowDay) {
           case 'Sun':
             hjmessage =
@@ -159,7 +159,7 @@ startRead();
             break;
           case 'Fri':
             hjmessage =
-            "🍆 sEXTA XERA SEN REGRAS 💦"
+            "🍆 sEXTA XERA SEN REGRAS 💦"+"\n"+
             "De dia: Cracolês e tretas (ou não)"+"\n"+
             "De noite: Nudeshot e putaria (ou sim)"+"\n"+
             " "+"\n";
