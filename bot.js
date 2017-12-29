@@ -1,16 +1,26 @@
 var fs = require('fs');
+var moment = require('moment');
+//const Pornsearch = require('pornsearch').default;
+var nowDay = moment().format('ddd');
 
 // Telegram api config
-  var token = 'Bot_Token';
+  var token = '501638485:AAG_WSsAYnbLjBoLXVGyhGH5P2mQOvYtqUw';
   var Bot = require('node-telegram-bot-api'),
       bot = new Bot(token, { polling: true });
 
+// Global Var
+  let bddata={}, newBdia, newbdv, newptv, newBdiaCount=0, newgifCount=0;
+  let dropfilesurl = [['https://www.dropbox.com/s/v41eatqgawwso3z/data.json','data.json','bddata'],['https://www.dropbox.com/s/1xpbz9xhrho6bzy/gifdata.json','gifdata.json', 'gifdata']];
+  let gifdata={
+    'newgif':[],
+    'ckdgif':[]
+  }
 
 // Dropbox Config
   var Dropbox         = require('dropbox');
-  var DROPBOX_APP_KEY    = "drop_app_key";
-  var DROPBOX_APP_SECRET = "drop_app_secret"; 
-  var THE_TOKEN = 'dropbox_token';
+  var DROPBOX_APP_KEY    = "frw7yuri1cmb9ar";
+  var DROPBOX_APP_SECRET = "7iyz64huesd582l";
+  var THE_TOKEN = 'KDvGvrJ5lu4AAAAAAAAOewS1FKVR1aXR5BU2KPH9vJ4VfRIkxHw1j0_RwjYHJf3T';
 
   var dbx = new Dropbox({
     key: DROPBOX_APP_KEY,
@@ -19,6 +29,36 @@ var fs = require('fs');
     sandbox: false
   });
 
+// Giphy API Config
+var GphApiClient = require('giphy-js-sdk-core');
+client = GphApiClient("8APZlCqqysEkAXkybAroVoTZi5tGVBuS");
+
+var gfl='3', gfrate= 'r', gfq = 'sexy ass';
+/// Gif Search
+function gfsearch(){
+client.search('gifs', {"q": gfq, 'limit': gfl, 'rating': gfrate})
+  .then((response) => {
+    response.data.forEach((gifObject) => {
+      console.log(gifObject)
+    })
+  })
+  .catch((err) => {
+
+  });
+}
+
+var gfrandtag = 'sexy', gfrresp;
+/// Random Gif
+function gfrandom(gfrandtag, response){
+client.random('gifs', {'tag': gfrandtag, 'rating': gfrate})
+  .then((response) => {
+    gfrresp = response;
+  })
+  .catch((err) => {
+
+  });
+}
+
 
 // Seção de Notas
   // IDEA: detectar pontos e utilizar eles aleatoriamente ou decididamente: "Bomdia! ..." "Bom dia, ..." "Bom dia ? ..."
@@ -26,29 +66,57 @@ var fs = require('fs');
   // IDEA: organizar como o bot será utilizado em vários grupos: arquivos diferentes ? mesclar bases de dados ?
   // IDEA: json não trabalha com "" dá problema, tem que converter regex pra detectar : (.+)(')(.+)(')(.+)?
 
-// Global Var
-  let bddata={}, newBdia, newbdv, newptv, newBdiaCount=0;
+
 
 console.log('bot server started...');
 startRead();
 
 // pega o arquivo no dropbox e transforma em objeto
+
   function startRead(){
       //bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
-    dbx.sharingGetSharedLinkFile({ url: 'https://www.dropbox.com/s/v41eatqgawwso3z/data.json' })
-        .then(function (data) {
-          //console.log(data);
-          fs.writeFileSync(data.name, data.fileBinary, 'binary', function (err) {
-            if (err) { throw err; }else{
-            console.log('File: ' + data.name + ' saved.');
+    for (let id of dropfilesurl) {
+      //console.log(id[2]);
+      dbx.sharingGetSharedLinkFile({ url: id[0] })
+          .then(function (data) {
+            //console.log(id[0], data);
+            fs.writeFileSync(data.name, data.fileBinary, 'binary', function (err) {
+              if (err) { throw err; }else{
+              //console.log('File: ' + data.name + ' saved.');
+              }
+            });
+            if (id[2] === 'bddata') {
+                bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
+            }else if (id[2] === 'gifdata'){
+                gifdata = JSON.parse(require('fs').readFileSync('gifdata.json', 'utf8'));
             }
+          })
+          .catch(function (err) {
+            throw err;
           });
-          bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
-        })
-        .catch(function (err) {
-          throw err;
-        });
+    }
+
   }
+
+
+// comando para iamgem do dia
+  bot.onText(/^\/bdcdia$|^\/bdcdia@bomdiacracobot$/, function (msg, match) {
+    var text='https://www.dropbox.com/s/77byqxoowpns5yl/bdcdia.jpg?raw=1';
+    bot.sendPhoto(msg.chat.id, text).then(function () {
+      // reply sent!
+    });
+  });
+
+// comando para ultimos recebidos
+  bot.onText(/^\/bdcultimos$|^\/bdcultimos@bomdiacracobot$/, function (msg, match) {
+    var text='';
+    for (var i = 0; i < bddata.latebdreceived.length; i++) {
+      text += bddata.latebdreceived[i]+"\n";
+    }
+    bot.sendMessage(msg.chat.id, text).then(function () {
+      // reply sent!
+    });
+  });
 
 // comando para help
   bot.onText(/^\/bdchelp$|^\/bdchelp@bomdiacracobot$/, function (msg, match) {
@@ -61,24 +129,115 @@ startRead();
     "\\bdcstatus - para ver a quantidades de bom dias no banco." +"\n"+
     "\\bdcultimos - para ver os ultimos bom dias adicionados" +"\n"+
     "\\bdcsum - para... somar ..." +"\n";
-
-
     bot.sendMessage(msg.chat.id, text).then(function () {
       // reply sent!
     });
   });
 
-// comando para help
-  bot.onText(/^\/bdcultimos$|^\/bdcultimos@bomdiacracobot$/, function (msg, match) {
-    var text='';
-    for (var i = 0; i < bddata.latebdreceived.length; i++) {
-      text += bddata.latebdreceived[i]+"\n";
+
+//
+
+
+
+// Recebimento de gifs putaria
+  bot.on('document', (msg) => {
+    //nowDay === 'Fri' &&
+    if (msg.document.mime_type === 'video/mp4') {
+      var newGf =msg.document.file_id;
+      checkBdData(gifdata.newgif, newGf);
     }
+  });
 
-    bot.sendMessage(msg.chat.id, text).then(function () {
-      // reply sent!
+// comando para putarias
+  var gftagrx = /^(putaria)$/gi;
+  bot.onText(gftagrx, function (msg, match) {
+    var gifnum = Math.floor(Math.random() * gifdata.newgif.length);
+    var gfid = gifdata.newgif[gifnum];
+    bot.sendDocument(msg.chat.id, gfid).then(function () {
     });
   });
+
+// possivel random gif searcher / translator
+  // client.random('gifs', {'tag': gfrandtag, 'rating': gfrate})
+  //   .then((response) => {
+  //     gfurl=response;
+  //     console.log(gfurl.data.url);
+  //     gfurl=gfurl.data.url;
+  // bot.sendDocument(msg.chat.id, gfurl).then(function () {
+  //   // reply sent!
+  // });
+  //});
+
+// pornhub gif scraper
+// Pornsearch.search(gfrandtag)
+//   .gifs(1)
+//   .then(gifs => {
+//     //console.log(gifs.map(gif => gif.url));
+//     gifs.map(gif => gfdata.push(gif.url));
+//     console.log(gifs, gfdata, gfdata.length);
+//     var gifnum = Math.floor(Math.random() * gfdata.length);
+//     gfurl = gfdata[gifnum]
+
+// tumblr rssgif links scrapper
+///(\<img src\=\")(h\S+gif(?!\"\/\<br))("\/\>)/gi
+// comando para Hoje é dia quê
+    var hjmessage, hjdiarx = /^(\w+(?=\s)\s)?((hoje|hj)|(que|q))?(.{3}|.)?((dia)|(hoje|hj)|(que|q))(.{4}|.{3})((dia)|(hoje|hj)|(que|q))$/gi;
+    bot.onText(hjdiarx, function (msg, match) {
+      var tp1 = match[6]; //dia
+      var tp2 = match[11] // q que ou hoje
+      console.log(tp1, tp2, tp2===('q'||'que'||'hoje'||'hj') );
+      if (tp1==='dia' && tp2===('q'||'que'||'hoje'||'hj')) {
+        switch (nowDay) {
+          case 'Sun':
+            hjmessage =
+            "🍰🍷 DOMINGO MIÇANGUEIRO CREATIVO DA POHRA 🎨"+"\n"+
+            "Pornfood e artes"+"\n"+
+            "(desenhos, textos, fotos de paisagens, pets, etc)"+"\n"+
+            +" "+"\n";
+            break;
+          case 'Mon':
+            hjmessage =
+            "🎧segunda feira spatifou🎤"+"\n"+
+            "Músicas, artistas, playlists e karaoke"+"\n"+
+            " "+"\n";
+            break;
+          case 'Tue':
+            hjmessage =
+            "📷terça feira ególatra💆"+"\n"+
+            "Egoshot, histórias pessoais e desabafos"+"\n"+
+            " "+"\n";
+            break;
+          case 'Wed':
+            hjmessage =
+            "😂quarta feira gozada👌"+"\n"+
+            "Piadas, twits, prints..."+"\n"+
+            " "+"\n";
+            break;
+          case 'Thu':
+            hjmessage =
+            "📢 QUINTA FEIRA RADIO DE INTERNETE 📻"+"\n"+
+            "Episódios de podcast pra indicar, lolicast e audiozaços..."+"\n"+
+            " "+"\n";
+            break;
+          case 'Fri':
+            hjmessage =
+            "🍆 sEXTA XERA SEN REGRAS 💦"
+            "De dia: Cracolês e tretas (ou não)"+"\n"+
+            "De noite: Nudeshot e putaria (ou sim)"+"\n"+
+            " "+"\n";
+            break;
+          case 'Sat':
+            hjmessage =
+            "🎮 QUAL É A BOA / BOSTA DE SÁBADO ? 🎥"+"\n"+
+            "(des) indicações pro fim de semana"+"\n"+
+            " "+"\n";
+            break;
+        }
+        bot.sendMessage(msg.chat.id, hjmessage).then(function () {
+        });
+      }
+    });
+
 
 // comando para verificar bom dias
   bot.onText(/^\/bdcstatus$|^\/bdcstatus@bomdiacracobot$/, function (msg, match) {
@@ -98,24 +257,26 @@ startRead();
   });
 
 // listen de bom dias
-///^(bom\s+dia+\s?)((.+)?)$/gi
-  var bdrx = /^((b(\w)+)(\s?)(d\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi;
+// /^(bom\s+dia+\s?)((.+)?)$/gi
+// /^(((bo|bu)(\w+)?)(\s?)((di|de|dj)\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi
+// /^((b(\w)+)(\s?)(d\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi
+  var bdrx = /^(((bo|bu)(\w+)?)(\s?)((di|de|dj)\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi;
   bot.onText(bdrx, function (msg, match) {
     newbdv = match[1];
-    newptv = match[6];
-    newBdia = match[8];
+    newptv = match[8];
+    newBdia = match[10];
     var bdiaback;
     console.log(newBdia);
+
     // checa por arrobas que não podem
     if (newBdia !== undefined) {
       var notBdia = newBdia.match(/(\@)/gi, '$1');
     }
-    // check se o bom dia foi dado corretamente
 
+    // check se o bom dia foi dado corretamente
     if (newBdia === undefined) {
       newBomDia();
       saveLastSay();
-      // var bdiaback = "Que bom dia o quê, não é assim que damos bom dia por aqui.. É assim:  Bom dia seus adoradores de crushs inatingíveis";
     }else if(notBdia !== null){
       var bdiaback = "NOT. Just Not."+'\n'+"Nada de marcar pessoas e botar o meu na reta.";
     }else{
@@ -124,7 +285,7 @@ startRead();
       saveLastListen();
     }
 
-    // Gera um bom dia ramdom do banco e vê se não é igual aos últimos falados.
+// Gera um bom dia ramdom do banco e checa com os últimos falados.
     function newBomDia(){
       for (var i = 0; i < bddata.bomdia.length; i++) {
         var bdnum = Math.floor(Math.random() * bddata.bomdia.length);
@@ -162,7 +323,7 @@ startRead();
       bddata.latebdreceived.shift();
       bddata.latebdreceived.push(newBdia);
       //console.log(bddata.latebomdia);
-      checkBdData(newBdia);
+      checkBdData(bddata.bomdia, newBdia);
       checkBdvData(newbdv);
     }
 
@@ -171,9 +332,10 @@ startRead();
   });
 
 // checa se a frase de bom dia recebido já existe no banco
-  function checkBdData(newBdia){
-    var existe = bddata.bomdia.findIndex(function(elem){
-      // console.log(elem, newBdia);
+  function checkBdData(path, newBdia){
+    //console.log(path, newBdia);
+    var existe = path.findIndex(function(elem){
+      //console.log(elem, newBdia);
       if (elem === newBdia){
         return true;
       }else{
@@ -181,15 +343,21 @@ startRead();
       }
     });
 
+    if (path === 'gifdata.newgif'){
+      newgifCount =+1;
+    }
     // Adiciona bom dia no banco de bom dias
     if (existe === -1) {
-      bddata.bomdia.push(newBdia);
+      path.push(newBdia);
       newBdiaCount +=1;
       console.log(newBdiaCount);
     }
     if (newBdiaCount > 10){
       saveNewdata(bddata);
       newBdiaCount=0;
+    } else if(newgifCount > 10){
+      saveNewdata(gifdata);
+      newgifCount=0;
     }
   }
 
@@ -210,16 +378,23 @@ startRead();
       newBdiaCount +=1;
       console.log(newBdiaCount);
     }
+
     if (newBdiaCount > 10){
       saveNewdata(bddata);
       newBdiaCount=0;
     }
   }
 
+
+
 // sava arquivo json com bom dias no dropbox a cada 10 novos
-  function saveNewdata(bddata){
-    let json = JSON.stringify(bddata, null, 2);
-    dbx.filesUpload({ path: '/data.json', contents: json, mode:'overwrite' })
+  function saveNewdata(dataVar){
+    var datalth = Object.keys(dataVar).length;
+    console.log(Object.keys(bddata).length, Object.keys(gifdata).length, datalth, datalth < 3 ? '/gifdata.json':'/data.json', Object.keys(dataVar).length < 3 ? '/gifdata.json':'/data.json');
+    var filename =  Object.keys(dataVar).length > 3 ? '/data.json' : '/gifdata.json';
+    console.log(filename);
+    let json = JSON.stringify(dataVar, null, 2);
+    dbx.filesUpload({ path: filename, contents: json, mode:'overwrite' })
       .then(function (response) {
         console.log('Data Saved.');
         startRead();
