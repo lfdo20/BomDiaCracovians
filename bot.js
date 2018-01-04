@@ -1,5 +1,9 @@
 var fs = require('fs');
 var moment = require('moment');
+var request = require('request');
+var feed = require('feed-read')
+
+
 
 // Telegram api config
   var token = '501638485:AAG_WSsAYnbLjBoLXVGyhGH5P2mQOvYtqUw';
@@ -7,13 +11,20 @@ var moment = require('moment');
       bot = new Bot(token, { polling: true });
 
 // Global Var
-  let bddata={}, newBdia, newbdv, newptv, newBdiaCount=0, newgifCount=0;
+  let bddata={}, newBdia, newbdv, newptv, newBdiaCount=0, newgifCount=0, rgifcount=0;
   let dropfilesurl = [['https://www.dropbox.com/s/v41eatqgawwso3z/data.json','data.json','bddata'],['https://www.dropbox.com/s/1xpbz9xhrho6bzy/gifdata.json','gifdata.json', 'gifdata']];
   let gifdata={
     'newgif':[],
-    'ckdgif':[]
+    'ckdgif':[],
+    'lastgif': []
   };
+
+// Time config
   var nowDay = moment().format('ddd');
+  var nowTime = moment();
+  var sTime = new moment('14:00', 'HHmm'); // 14:00
+  var eTime = new moment('23:59', 'HHmm'); // 14:00
+
 
 // Dropbox Config
   var Dropbox         = require('dropbox');
@@ -29,8 +40,6 @@ var moment = require('moment');
   });
 
 // Seção de Notas
-  // IDEA: detectar pontos e utilizar eles aleatoriamente ou decididamente: "Bomdia! ..." "Bom dia, ..." "Bom dia ? ..."
-  // IDEA: ignorar frases com @ para não taguear pessoas, Deixar um aviso que não pode.
   // IDEA: organizar como o bot será utilizado em vários grupos: arquivos diferentes ? mesclar bases de dados ?
   // IDEA: json não trabalha com "" dá problema, tem que converter regex pra detectar : (.+)(')(.+)(')(.+)?
 
@@ -99,24 +108,227 @@ startRead();
 
 // Recebimento de gifs putaria
   bot.on('document', (msg) => {
-    //nowDay === 'Fri' &&
-    if (msg.document.mime_type === 'video/mp4') {
-      var newGf =msg.document.file_id;
-      checkBdData(gifdata.newgif, newGf);
+    if (nowDay === 'Thu') {
+      if (msg.document.mime_type === 'video/mp4') {
+        //console.log(msg.document);
+        //var gifthumb = 'https://api.telegram.org/file/bot'+token+'/'+msg.document.thumb.file_path;
+        var newGf = [msg.document.file_id, msg.document.file_size.toString()];
+        //console.log(gifthumb);
+        checkBdData(gifdata.newgif, newGf, 'gif');
+        rgifcount +=1;
+        console.log(rgifcount);
+        if (rgifcount > 3) {
+          if (!moment().isBetween(sTime, eTime, 'minute', '[]')) {
+            randomGif(msg);
+            rgifcount=0;
+          }
+        }
+      }
+    }else {
+      return;
     }
   });
+
+// NOTE: implementar lista de ultimos utilizados, gravar o número do random
 
 // comando para putarias
   var gftagrx = /^(putaria)$/gi;
   bot.onText(gftagrx, function (msg, match) {
-    var gifnum = Math.floor(Math.random() * gifdata.newgif.length);
-    var gfid = gifdata.newgif[gifnum];
-    bot.sendDocument(msg.chat.id, gfid).then(function () {
-    });
+    if (nowDay !== 'Fri') { // Correto é Fri
+      bot.sendMessage(msg.chat.id, 'Hoje não é dia né. Tá achando que putaria é bagunça!?').then(function () {
+      });
+    }else{
+      if (!moment().isBetween(sTime, eTime, 'minute', '[]')) {
+        var faltam = Math.abs(moment().diff(sTime, 'minute'));
+          faltam = faltam>60 ? Math.round(faltam/60) +' h e ' + faltam % 60 +' min' : faltam;
+        bot.sendMessage(msg.chat.id, 'Caaaaalma, faltam '+faltam+' para começar a putaria!').then(function () {
+        });
+      }else{
+
+      for (var i = 0; i < gifdata.ckdgif.length; i++) {
+        var gfid, gifnum = Math.floor(Math.random() * gifdata.ckdgif.length);
+        gifdata.lastgif.findIndex(function(str){
+          if (str !== gifnum) {
+            gfid = gifdata.ckdgif[gifnum][0];
+          }else{
+            return;
+          }
+        });
+        if (gfid !== undefined) {
+          bot.sendDocument(msg.chat.id, gfid).then(function () {
+            gifdata.lastgif.shift();
+            gifdata.lastgif.push(gifnum.toString());
+            //console.log(gifdata.lastgif[18],gifnum.toString());
+            newgifCount +=1;
+            rgifcount+=1;
+            if(newgifCount >= 5){
+              //console.log(gifdata.lastgif);
+              saveNewdata(gifdata);
+              newgifCount=0;
+            }
+          });
+          i = gifdata.ckdgif.length+1;
+
+          }
+        }
+        }
+      }
   });
 
-// tumblr rssgif links scrapper
+// NOTE: tumblr list pequena, feed parser com problema e só detecta alguns tumblrs
+
 ///(\<img src\=\")(h\S+gif(?!\"\/\<br))("\/\>)/gi
+// comando para putarias random tumblr
+  var uri, ix=0, rgifrx =/(\<img src\=\")(h\S+gif(?!\"\/\<br))("\/\>)/gi;
+  function randomGif(msg){
+    //console.log(gifdata.tumblrgif.length);
+    if (gifdata.tumblrgif.length >0) {
+      bot.sendDocument(msg.chat.id, gifdata.tumblrgif[0]).then(function() {
+        gifdata.tumblrgif.shift();
+        rgifcount=0;
+      });
+    }else{
+      if (gifdata.tumblrgif.length === 0) {
+        getlink();
+        function getlink(){
+          if (ix < gifdata.tumblrlist.length) {
+            uri = gifdata.tumblrlist[ix][0].toString();
+            //console.log('rgif : '+ix+' & '+uri);
+            getFeed(uri,ix).then(function(){ });
+            ix = ix+1;
+            //console.log(ix);
+          }
+        }
+        function getFeed(uri, ix){
+          return new Promise(function(resolve, reject){
+            feed(uri, function(err, fed) {
+              if (err) {console.log(err);}
+              //console.log(fed.length);
+              var newpost = new moment(fed[fed.length-1].published);
+              //console.log(gifdata.tumblrlist[ix][1]);
+              var oldpost = new moment(gifdata.tumblrlist[ix][1].toString(), 'MMM DD YYYY');
+              //console.log(newpost, oldpost);
+              if (newpost > oldpost) {
+                //console.log('ok novos posts');
+                var rgifl=[], rgiflist=[],rtemp;
+                //console.log(fed.length);
+                for (var j = 0; j < fed.length; j++) {
+                  rgifl += fed[j].content;
+                }
+                //console.log(rgifl);
+                rgifl.replace(rgifrx, function(match, p1,p2){
+                  //console.log(match, p1, p2);
+                  gifdata.tumblrgif.push(p2);
+                });
+                //console.log(gifdata.tumblrgif);
+                //console.log(fed[fed.length-1].published);
+                gifdata.tumblrlist[ix].pop();
+                gifdata.tumblrlist[ix].push(fed[fed.length-1].published.toString().match(/(\w{3} \d{2} \w{4})/g, '$1').toString());
+                ix = gifdata.tumblrlist.length+1;
+                //console.log(gifdata.tumblrlist);
+                //console.log(gifdata.tumblrgif);
+                saveNewdata(gifdata);
+                bot.sendDocument(msg.chat.id, gifdata.tumblrgif[0]).then(function() {
+                  gifdata.tumblrgif.shift();
+                  rgifcount=0;
+                });
+              }else{
+                //console.log('ok no posts');
+                getlink(ix);
+              }
+            });
+      });
+    }
+    }
+  }
+}
+
+// comando para salvar todos os thumbs de gifs
+  // var download = function(uri, filename, callback){
+  // request.head(uri, function(err, res, body){
+  //   console.log('content-type:', res.headers['content-type']);
+  //   console.log('content-length:', res.headers['content-length']);
+  //
+  //   request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+  // });
+  // };
+  //
+  // download('https://www.google.com/images/srpr/logo3w.png', 'google.png', function(){
+  // console.log('done');
+  // });
+
+// comando para checar os gifs
+  var ckgfid='', ckgfsize='', ckgfthlink='', checknum='';
+  var endkeyboard = function(msg){
+    saveNewdata(gifdata);
+    bot.sendMessage(msg.chat.id, 'Acabou.', {
+      "reply_to_message_id": msg.message_id,
+      "reply_markup": {
+          "remove_keyboard": true,
+          "selective": true
+    }
+  });
+  }
+  var newgfcheck = function(msg){
+    if (gifdata.newgif.length>0 && checknum>0) {
+      ckgfid = gifdata.newgif[0][0];
+      var uri = 'https://api.telegram.org/bot'+token+'/getFile?file_id='+ckgfid;
+      request.get(uri,  { json: true }, function(err, res, body){
+        console.log(body.result);
+        ckgfsize=body.result.file_size;
+        ckgfthlink='';
+      })
+      bot.sendDocument(msg.chat.id, ckgfid, {
+        "reply_to_message_id": msg.message_id,
+        "reply_markup": {
+          "keyboard": [["👍 Sim", " 👎 Não"],   ["👈 Pular"]],
+          "selective": true
+        }
+      }).then(function(){
+        checknum -=1;
+        // bot.getFile(ckgfid, function(res){
+        //   console.log(res);
+        // }).then(function(){
+        //});
+      });
+    }else{
+      endkeyboard(msg);
+    }
+  }
+  bot.onText(/^\/bdccheck(\s)(\d+)$/, function (msg, match) {
+    checknum = match[2]
+    console.log(checknum);
+    newgfcheck(msg);
+  });
+
+  bot.on( 'message', (msg) => {
+    if (checknum !== '') {
+    //console.log(msg);
+    var cks = "👍 sim";
+    if (msg.text.toString().toLowerCase().indexOf(cks) === 0) {
+      console.log('ok sim');
+      gifdata.newgif.shift();
+      var temp=[ckgfid, ckgfsize.toString()];
+      gifdata.ckdgif.push(temp);
+      //console.log(gifdata.ckdgif);
+      newgfcheck(msg);
+    }
+    var ckn = "👎 não";
+
+    if (msg.text.toString().toLowerCase().indexOf(ckn) === 0) {
+      console.log('ok não');
+      gifdata.newgif.shift();
+      newgfcheck(msg);
+    }
+    var ckr = "👈 pular";
+    if (msg.text.toString().toLowerCase().indexOf(ckr) === 0) {
+      console.log('ok pula');
+      gifdata.newgif.shift();
+      gifdata.newgif.push(ckgfid);
+      newgfcheck(msg);
+    }
+  }
+  });
 
 // comando para Hoje é dia quê
     var hjmessage, hjdiarx = /^(\w+(?=\s)\s)?((hoje|hj)|(que|q))?(.{3}|.)?((dia)|(hoje|hj)|(que|q))(.{4}|.{3})((dia)|(hoje|hj)|(que|q))$/gi;
@@ -261,7 +473,7 @@ startRead();
       bddata.latebdreceived.shift();
       bddata.latebdreceived.push(newBdia);
       //console.log(bddata.latebomdia);
-      checkBdData(bddata.bomdia, newBdia);
+      checkBdData(bddata.bomdia, newBdia, 'bomdia');
       checkBdvData(newbdv);
     }
 
@@ -270,30 +482,44 @@ startRead();
   });
 
 // checa se a frase de bom dia recebido já existe no banco
-  function checkBdData(path, newBdia){
+  function checkBdData(path, newBdia, origem){
     //console.log(path, newBdia);
-    var existe = path.findIndex(function(elem){
-      //console.log(elem, newBdia);
-      if (elem === newBdia){
-        return true;
-      }else{
-        return false;
-      }
-    });
-
-    if (path === 'gifdata.newgif'){
-      newgifCount =+1;
+    if (origem ==='gif') {
+      var existe = gifdata.ckdgif.findIndex(function(elem){
+        //console.log(elem[1], newBdia[1]);
+        if (elem[1] === newBdia[1]){
+          return true;
+        }else{
+          return false;
+        }
+      });
+    } else{
+      var existe = path.findIndex(function(elem){
+        //console.log(elem[1], newBdia[1]);
+        if (elem[1] === newBdia[1]){
+          return true;
+        }else{
+          return false;
+        }
+      });
     }
+
     // Adiciona bom dia no banco de bom dias
     if (existe === -1) {
       path.push(newBdia);
-      newBdiaCount +=1;
-      console.log(newBdiaCount);
+      if (origem === 'gif'){
+        newgifCount +=1;
+        console.log('Novo Gif: '+newgifCount, newBdia);
+      }else{
+        newBdiaCount +=1;
+        console.log('Novo Bom Dia: '+newBdiaCount, newBdia);
+      }
     }
-    if (newBdiaCount > 10){
+    if (newBdiaCount >= 10){
       saveNewdata(bddata);
+
       newBdiaCount=0;
-    } else if(newgifCount > 10){
+    } else if(newgifCount >= 10){
       saveNewdata(gifdata);
       newgifCount=0;
     }
@@ -314,7 +540,6 @@ startRead();
     if (existe === -1) {
       bddata.bdiasvar.push(newbdv);
       newBdiaCount +=1;
-      console.log(newBdiaCount);
     }
 
     if (newBdiaCount > 10){
@@ -325,14 +550,13 @@ startRead();
 
 // sava arquivo json com bom dias no dropbox a cada 10 novos
   function saveNewdata(dataVar){
-    var datalth = Object.keys(dataVar).length;
-    console.log(Object.keys(bddata).length, Object.keys(gifdata).length, datalth, datalth < 3 ? '/gifdata.json':'/data.json', Object.keys(dataVar).length < 3 ? '/gifdata.json':'/data.json');
-    var filename =  Object.keys(dataVar).length > 3 ? '/data.json' : '/gifdata.json';
+    console.log(Object.keys(bddata).length, Object.keys(gifdata).length,  Object.keys(dataVar).length > 6 ? '/data.json': '/gifdata.json');
+    var filename =  Object.keys(dataVar).length > 6 ? '/data.json' : '/gifdata.json';
     console.log(filename);
     let json = JSON.stringify(dataVar, null, 2);
     dbx.filesUpload({ path: filename, contents: json, mode:'overwrite' })
       .then(function (response) {
-        console.log('Data Saved.');
+        console.log('Data Saved :'+filename);
         startRead();
       })
       .catch(function (err) {

@@ -17,6 +17,7 @@
   "dependencies": {
     "dropbox": "^2.5.12",
     "express": "^4.16.2",
+    "feed-read": "0.0.1",
     "moment": "^2.20.1",
     "node-telegram-bot-api": "^0.29.0"
   }
