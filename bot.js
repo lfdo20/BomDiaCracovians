@@ -36,7 +36,7 @@ var Dropbox  = require('dropbox');
 
 // Seção de Notas
   // IDEA: organizar como o bot será utilizado em vários grupos: arquivos diferentes ? mesclar bases de dados ?
-  // IDEA: json não trabalha com "" dá problema, tem que converter regex pra detectar : (.+)(')(.+)(')(.+)?
+  // IDEA: json não trabalha com " " dá problema, tem que converter regex pra detectar : (.+)(')(.+)(')(.+)?
 
   console.log('bot server started...');
 
