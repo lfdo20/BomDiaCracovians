@@ -15,6 +15,7 @@
   "author": "Leandro Fernandes lfdo <lfdo20@gmail.com> (https://lfdo20.github.io/lfdo)",
   "license": "MIT",
   "dependencies": {
+    "dotenv": "^4.0.0",
     "dropbox": "^2.5.12",
     "express": "^4.16.2",
     "feed-read": "0.0.1",

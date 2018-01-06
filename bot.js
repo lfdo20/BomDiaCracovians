@@ -1,14 +1,15 @@
-var fs = require('fs');
-var moment = require('moment');
-var request = require('request');
-var feed = require('feed-read')
+var fs       = require('fs');
+var moment   = require('moment');
+var request  = require('request');
+var feed     = require('feed-read');
+var dotenv   = require('dotenv');
+var Dropbox  = require('dropbox');
 
-
+//local setup
+  dotenv.load();
 
 // Telegram api config
-  var token = '501638485:AAG_WSsAYnbLjBoLXVGyhGH5P2mQOvYtqUw';
-  var Bot = require('node-telegram-bot-api'),
-      bot = new Bot(token, { polling: true });
+  var Bot = require('node-telegram-bot-api'),  bot = new Bot(process.env.BOT_TOKEN, { polling: true });
 
 // Global Var
   let bddata={}, newBdia, newbdv, newptv, newBdiaCount=0, newgifCount=0, rgifcount=0;
@@ -25,17 +26,11 @@ var feed = require('feed-read')
   var sTime = new moment('14:00', 'HHmm'); // 14:00
   var eTime = new moment('23:59', 'HHmm'); // 14:00
 
-
 // Dropbox Config
-  var Dropbox         = require('dropbox');
-  var DROPBOX_APP_KEY    = "frw7yuri1cmb9ar";
-  var DROPBOX_APP_SECRET = "7iyz64huesd582l";
-  var THE_TOKEN = 'KDvGvrJ5lu4AAAAAAAAOewS1FKVR1aXR5BU2KPH9vJ4VfRIkxHw1j0_RwjYHJf3T';
-
   var dbx = new Dropbox({
-    key: DROPBOX_APP_KEY,
-    secret: DROPBOX_APP_SECRET,
-    accessToken: THE_TOKEN,
+    key: process.env.DROPBOX_APP_KEY,
+    secret: process.env.DROPBOX_APP_SECRET,
+    accessToken: process.env.DROPBOX_TOKEN,
     sandbox: false
   });
 
@@ -43,10 +38,10 @@ var feed = require('feed-read')
   // IDEA: organizar como o bot será utilizado em vários grupos: arquivos diferentes ? mesclar bases de dados ?
   // IDEA: json não trabalha com "" dá problema, tem que converter regex pra detectar : (.+)(')(.+)(')(.+)?
 
-console.log('bot server started...');
-startRead();
+  console.log('bot server started...');
 
 // pega o arquivo no dropbox e transforma em objeto
+  startRead();
   function startRead(){
       //bddata = JSON.parse(require('fs').readFileSync('data.json', 'utf8'));
     for (let id of dropfilesurl) {
@@ -71,7 +66,7 @@ startRead();
     }
   }
 
-// comando para iamgem do dia
+// comando para imagem do dia
   bot.onText(/^\/bdcdia$|^\/bdcdia@bomdiacracobot$/, function (msg, match) {
     var text='https://www.dropbox.com/s/77byqxoowpns5yl/bdcdia.jpg?raw=1';
     bot.sendPhoto(msg.chat.id, text).then(function () {
@@ -90,6 +85,17 @@ startRead();
     });
   });
 
+// comando para salvar arquivos
+  bot.onText(/^\/bdcsave\s(data|gif)$/, function (msg, match) {
+    if (match[1]==='data') {
+      saveNewdata(bddata);
+    }else if (match[1]==='gif') {
+      saveNewdata(gifdata);
+    }
+    bot.sendMessage(msg.chat.id, 'Salvo!').then(function () {
+    });
+  });
+
 // comando para help
   bot.onText(/^\/bdchelp$|^\/bdchelp@bomdiacracobot$/, function (msg, match) {
     var text =
@@ -99,16 +105,15 @@ startRead();
     'mas ainda não entendo coisas loucas tipo "buónday".' +"\n"+
     "\n"+
     "\\bdcstatus - para ver a quantidades de bom dias no banco." +"\n"+
-    "\\bdcultimos - para ver os ultimos bom dias adicionados" +"\n"+
-    "\\bdcsum - para... somar ..." +"\n";
+    "\\bdcultimos - para ver os ultimos bom dias adicionados" +"\n";
     bot.sendMessage(msg.chat.id, text).then(function () {
       // reply sent!
     });
   });
 
-// Recebimento de gifs putaria
+// Recebimento de gifs putaria e contagem
   bot.on('document', (msg) => {
-    if (nowDay === 'Thu') {
+    if (nowDay === 'Sat') { // check is is Fri
       if (msg.document.mime_type === 'video/mp4') {
         //console.log(msg.document);
         //var gifthumb = 'https://api.telegram.org/file/bot'+token+'/'+msg.document.thumb.file_path;
@@ -116,9 +121,9 @@ startRead();
         //console.log(gifthumb);
         checkBdData(gifdata.newgif, newGf, 'gif');
         rgifcount +=1;
-        console.log(rgifcount);
+        console.log('Gif aleatório contador: '+rgifcount);
         if (rgifcount > 3) {
-          if (!moment().isBetween(sTime, eTime, 'minute', '[]')) {
+          if (moment().isBetween(sTime, eTime, 'minute', '[]')) {
             randomGif(msg);
             rgifcount=0;
           }
@@ -129,10 +134,26 @@ startRead();
     }
   });
 
-// NOTE: implementar lista de ultimos utilizados, gravar o número do random
+// NOTE: data não está detectando o dia após meia noite.
 
-// comando para putarias
-  var gftagrx = /^(putaria)$/gi;
+// função para lembrar que vai começar a putaria
+  var endputsaid=0;
+  function putariaRemenber(msg, faltam){
+    console.log(faltam);
+    if (faltam <= 60&& endputsaid===0) {
+      bot.sendMessage(msg.chat.id, 'Faltam '+faltam+ ' minutos para acabar a putaria! 😭😭 ').then(function () {
+        endputsaid=2;
+      });
+    }else if (faltam <= 20&& endputsaid===2) {
+      bot.sendMessage(msg.chat.id, 'Faltam '+faltam+' minutos para acabar a putaria! 😱😱 ').then(function () {
+        endputsaid=4;
+      });
+    }else if (faltam <=1 ||faltam > 60 && endputsaid!==0) {endputsaid=0; }
+  }
+
+
+// comando para gifs putaria
+  var gftagrx = /^(.+)?(p(u|o)+taria+)(.+)?$/gi;
   bot.onText(gftagrx, function (msg, match) {
     if (nowDay !== 'Fri') { // Correto é Fri
       bot.sendMessage(msg.chat.id, 'Hoje não é dia né. Tá achando que putaria é bagunça!?').then(function () {
@@ -140,7 +161,7 @@ startRead();
     }else{
       if (!moment().isBetween(sTime, eTime, 'minute', '[]')) {
         var faltam = Math.abs(moment().diff(sTime, 'minute'));
-          faltam = faltam>60 ? Math.round(faltam/60) +' h e ' + faltam % 60 +' min' : faltam;
+          faltam = faltam>60 ? Math.round(faltam/60) +' h e ' + faltam % 60 +' min' : faltam+' min';
         bot.sendMessage(msg.chat.id, 'Caaaaalma, faltam '+faltam+' para começar a putaria!').then(function () {
         });
       }else{
@@ -177,8 +198,7 @@ startRead();
 
 // NOTE: tumblr list pequena, feed parser com problema e só detecta alguns tumblrs
 
-///(\<img src\=\")(h\S+gif(?!\"\/\<br))("\/\>)/gi
-// comando para putarias random tumblr
+// função para putarias random tumblr
   var uri, ix=0, rgifrx =/(\<img src\=\")(h\S+gif(?!\"\/\<br))("\/\>)/gi;
   function randomGif(msg){
     //console.log(gifdata.tumblrgif.length);
@@ -237,13 +257,13 @@ startRead();
                 getlink(ix);
               }
             });
-      });
-    }
+          });
+        }
+      }
     }
   }
-}
 
-// comando para salvar todos os thumbs de gifs
+// NOTE:  comando para salvar todos os thumbs de gifs
   // var download = function(uri, filename, callback){
   // request.head(uri, function(err, res, body){
   //   console.log('content-type:', res.headers['content-type']);
@@ -257,7 +277,7 @@ startRead();
   // console.log('done');
   // });
 
-// comando para checar os gifs
+// comandos para checar os gifs
   var ckgfid='', ckgfsize='', ckgfthlink='', checknum='';
   var endkeyboard = function(msg){
     saveNewdata(gifdata);
@@ -266,8 +286,8 @@ startRead();
       "reply_markup": {
           "remove_keyboard": true,
           "selective": true
-    }
-  });
+      }
+    });
   }
   var newgfcheck = function(msg){
     if (gifdata.newgif.length>0 && checknum>0) {
@@ -297,97 +317,116 @@ startRead();
   }
   bot.onText(/^\/bdccheck(\s)(\d+)$/, function (msg, match) {
     checknum = match[2]
-    console.log(checknum);
     newgfcheck(msg);
   });
 
+// comando para analisar várias mensagens recebidas e distribuir as funções
+  var putexec = false;
   bot.on( 'message', (msg) => {
+    if (nowDay === 'Fri') {
+        var putariaCalc = (function(msg) {
+          return function(msg) {
+            if (!putexec) {
+              var timeS = moment.unix(msg.date).format("HH");
+              if (timeS= '23') {
+                var faltam = Math.abs(moment().diff(eTime, 'minute'));
+                putariaRemenber(msg, faltam);
+              }
+              putexec = true;
+              setTimeout(()=>{ putexec = false;},3000);
+            }
+          };
+        })();
+        putariaCalc(msg);
+    }
     if (checknum !== '') {
-    //console.log(msg);
-    var cks = "👍 sim";
-    if (msg.text.toString().toLowerCase().indexOf(cks) === 0) {
-      console.log('ok sim');
-      gifdata.newgif.shift();
-      var temp=[ckgfid, ckgfsize.toString()];
-      gifdata.ckdgif.push(temp);
-      //console.log(gifdata.ckdgif);
-      newgfcheck(msg);
-    }
-    var ckn = "👎 não";
+      //console.log(msg);
+      var cks = "👍 sim";
+      if (msg.text.toString().toLowerCase().indexOf(cks) === 0) {
+        console.log('ok sim');
+        gifdata.newgif.shift();
+        var temp=[ckgfid, ckgfsize.toString()];
+        gifdata.ckdgif.push(temp);
+        //console.log(gifdata.ckdgif);
+        newgfcheck(msg);
+      }
 
-    if (msg.text.toString().toLowerCase().indexOf(ckn) === 0) {
-      console.log('ok não');
-      gifdata.newgif.shift();
-      newgfcheck(msg);
+      var ckn = "👎 não";
+      if (msg.text.toString().toLowerCase().indexOf(ckn) === 0) {
+        console.log('ok não');
+        gifdata.newgif.shift();
+        newgfcheck(msg);
+      }
+
+      var ckr = "👈 pular";
+      if (msg.text.toString().toLowerCase().indexOf(ckr) === 0) {
+        console.log('ok pula');
+        gifdata.newgif.shift();
+        gifdata.newgif.push(ckgfid);
+        newgfcheck(msg);
+      }
     }
-    var ckr = "👈 pular";
-    if (msg.text.toString().toLowerCase().indexOf(ckr) === 0) {
-      console.log('ok pula');
-      gifdata.newgif.shift();
-      gifdata.newgif.push(ckgfid);
-      newgfcheck(msg);
-    }
-  }
   });
 
 // comando para Hoje é dia quê
-    var hjmessage, hjdiarx = /^(\w+(?=\s)\s)?((hoje|hj)|(que|q))?(.{3}|.)?((dia)|(hoje|hj)|(que|q))(.{4}|.{3})((dia)|(hoje|hj)|(que|q))$/gi;
-    bot.onText(hjdiarx, function (msg, match) {
-      var tp1 = match[6]; //dia
-      var tp2 = match[11] // q que ou hoje
-      console.log(tp1, tp2 );
-      if (tp1==='dia' && tp2.match(/^(q|que|hoje|hj)$/)) {
-        switch (nowDay) {
-          case 'Sun':
-            hjmessage =
-            "🍰🍷 DOMINGO MIÇANGUEIRO CREATIVO DA POHRA 🎨"+"\n"+
-            "Pornfood e artes"+"\n"+
-            "(desenhos, textos, fotos de paisagens, pets, etc)"+"\n"+
-            +" "+"\n";
-            break;
-          case 'Mon':
-            hjmessage =
-            "🎧segunda feira spatifou🎤"+"\n"+
-            "Músicas, artistas, playlists e karaoke"+"\n"+
-            " "+"\n";
-            break;
-          case 'Tue':
-            hjmessage =
-            "📷terça feira ególatra💆"+"\n"+
-            "Egoshot, histórias pessoais e desabafos"+"\n"+
-            " "+"\n";
-            break;
-          case 'Wed':
-            hjmessage =
-            "😂quarta feira gozada👌"+"\n"+
-            "Piadas, twits, prints..."+"\n"+
-            " "+"\n";
-            break;
-          case 'Thu':
-            hjmessage =
-            "📢 QUINTA FEIRA RADIO DE INTERNETE 📻"+"\n"+
-            "Episódios de podcast pra indicar, lolicast e audiozaços..."+"\n"+
-            " "+"\n";
-            break;
-          case 'Fri':
-            hjmessage =
-            "🍆 sEXTA XERA SEN REGRAS 💦"+"\n"+
-            "De dia: Cracolês e tretas (ou não)"+"\n"+
-            "De noite: Nudeshot e putaria (ou sim)"+"\n"+
-            " "+"\n";
-            break;
-          case 'Sat':
-            hjmessage =
-            "🎮 QUAL É A BOA / BOSTA DE SÁBADO ? 🎥"+"\n"+
-            "(des) indicações pro fim de semana"+"\n"+
-            " "+"\n";
-            break;
-        }
-        bot.sendMessage(msg.chat.id, hjmessage).then(function () {
-        });
+  var hjmessage, hjdiarx = /^(\w+(?=\s)\s)?((hoje|hj)|(que|q))?(.{3}|.)?((dia)|(hoje|hj)|(que|q))(.{4}|.{3})((dia)|(hoje|hj)|(que|q))$/gi;
+  bot.onText(hjdiarx, function (msg, match) {
+    var tp1 = match[6]; //dia
+    var tp2 = match[11] // q que ou hoje
+    if (tp1==='dia' && tp2.match(/^(q|que|hoje|hj)$/)) {
+      switch (nowDay) {
+        case 'Sun':
+          hjmessage =
+          "🍰🍷 DOMINGO MIÇANGUEIRO CREATIVO DA POHRA 🎨"+"\n"+
+          "Pornfood e artes"+"\n"+
+          "(desenhos, textos, fotos de paisagens, pets, etc)"+"\n"+
+          +" "+"\n";
+          break;
+        case 'Mon':
+          hjmessage =
+          "🎧 segunda feira spatifou 🎤"+"\n"+
+          "Músicas, artistas, playlists e karaoke"+"\n"+
+          " "+"\n";
+          break;
+        case 'Tue':
+          hjmessage =
+          "📷 terça feira ególatra 💆"+"\n"+
+          "Egoshot, histórias pessoais e desabafos"+"\n"+
+          " "+"\n";
+          break;
+        case 'Wed':
+          hjmessage =
+          "😂 quarta feira gozada 👌"+"\n"+
+          "Piadas, twits, prints..."+"\n"+
+          " "+"\n";
+          break;
+        case 'Thu':
+          hjmessage =
+          "📢 QUINTA FEIRA RADIO DE INTERNETE 📻"+"\n"+
+          "Episódios de podcast pra indicar, lolicast e audiozaços..."+"\n"+
+          " "+"\n";
+          break;
+        case 'Fri':
+          hjmessage =
+          "🍆 sEXTA XERA SEN REGRAS 💦"+"\n"+
+          "De dia: Cracolês e tretas (ou não)"+"\n"+
+          "De noite: Nudeshot e putaria (ou sim)"+"\n"+
+          " "+"\n"+
+          "Envio gifs salvos quando se fala putaria."+"\n"+
+          "Envio gif random a cada 3 gifs que vcs mandam."+"\n",
+          " "+"\n";
+          break;
+        case 'Sat':
+          hjmessage =
+          "🎮 QUAL É A BOA / BOSTA DE SÁBADO ? 🎥"+"\n"+
+          "(des) indicações pro fim de semana"+"\n"+
+          " "+"\n";
+          break;
       }
-    });
-
+      bot.sendMessage(msg.chat.id, hjmessage).then(function () {
+      });
+    }
+  });
 
 // comando para verificar bom dias
   bot.onText(/^\/bdcstatus$|^\/bdcstatus@bomdiacracobot$/, function (msg, match) {
@@ -396,27 +435,15 @@ startRead();
     });
   });
 
-// comando para fazer somas, pra q? num sei..
-  bot.onText(/^\/bdcsum((\s+\d+)+)$|^\/bdcsum@bomdiacracobot((\s+\d+)+)$/, function (msg, match) {
-    var result = 0;
-    match[1].trim().split(/\s+/).forEach(function (i) {
-      result += (+i || 0);
-    })
-    bot.sendMessage(msg.chat.id, result).then(function () {
-    });
-  });
+// NOTE: buscar um novo algoritmo randomGif
 
 // listen de bom dias
-// /^(bom\s+dia+\s?)((.+)?)$/gi
-// /^(((bo|bu)(\w+)?)(\s?)((di|de|dj)\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi
-// /^((b(\w)+)(\s?)(d\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi
   var bdrx = /^(((bo|bu)(\w+)?)(\s?)((di|de|dj)\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi;
   bot.onText(bdrx, function (msg, match) {
     newbdv = match[1];
     newptv = match[8];
     newBdia = match[10];
     var bdiaback;
-    console.log(newBdia);
 
     // checa por arrobas que não podem
     if (newBdia !== undefined) {
@@ -427,15 +454,15 @@ startRead();
     if (newBdia === undefined) {
       newBomDia();
       saveLastSay();
-    }else if(notBdia !== null){
-      var bdiaback = "NOT. Just Not."+'\n'+"Nada de marcar pessoas e botar o meu na reta.";
-    }else{
-      newBomDia();
-      saveLastSay();
-      saveLastListen();
+      }else if(notBdia !== null){
+        var bdiaback = "NOT. Just Not."+'\n'+"Nada de marcar pessoas e botar o meu na reta.";
+      }else{
+        newBomDia();
+        saveLastSay();
+        saveLastListen();
     }
 
-// Gera um bom dia ramdom do banco e checa com os últimos falados.
+    // Gera um bom dia ramdom do banco e checa com os últimos falados.
     function newBomDia(){
       for (var i = 0; i < bddata.bomdia.length; i++) {
         var bdnum = Math.floor(Math.random() * bddata.bomdia.length);
@@ -472,7 +499,7 @@ startRead();
     function saveLastListen(){
       bddata.latebdreceived.shift();
       bddata.latebdreceived.push(newBdia);
-      //console.log(bddata.latebomdia);
+      //console.log(bddata.latebdreceived);
       checkBdData(bddata.bomdia, newBdia, 'bomdia');
       checkBdvData(newbdv);
     }
@@ -483,10 +510,10 @@ startRead();
 
 // checa se a frase de bom dia recebido já existe no banco
   function checkBdData(path, newBdia, origem){
-    //console.log(path, newBdia);
+    console.log(newBdia, origem);
     if (origem ==='gif') {
       var existe = gifdata.ckdgif.findIndex(function(elem){
-        //console.log(elem[1], newBdia[1]);
+        //console.log(elem[1], newBdia);
         if (elem[1] === newBdia[1]){
           return true;
         }else{
@@ -495,29 +522,28 @@ startRead();
       });
     } else{
       var existe = path.findIndex(function(elem){
-        //console.log(elem[1], newBdia[1]);
-        if (elem[1] === newBdia[1]){
+        //console.log(elem, newBdia);
+        if (elem === newBdia){
           return true;
         }else{
           return false;
         }
       });
     }
-
     // Adiciona bom dia no banco de bom dias
     if (existe === -1) {
-      path.push(newBdia);
       if (origem === 'gif'){
+        path.push(newBdia);
         newgifCount +=1;
-        console.log('Novo Gif: '+newgifCount, newBdia);
+        console.log('Novo gif recebido: '+newgifCount, newBdia);
       }else{
+        path.push(newBdia);
         newBdiaCount +=1;
-        console.log('Novo Bom Dia: '+newBdiaCount, newBdia);
+        console.log('Novo bom dia recebido: '+newBdiaCount, newBdia);
       }
     }
     if (newBdiaCount >= 10){
       saveNewdata(bddata);
-
       newBdiaCount=0;
     } else if(newgifCount >= 10){
       saveNewdata(gifdata);
@@ -541,7 +567,6 @@ startRead();
       bddata.bdiasvar.push(newbdv);
       newBdiaCount +=1;
     }
-
     if (newBdiaCount > 10){
       saveNewdata(bddata);
       newBdiaCount=0;

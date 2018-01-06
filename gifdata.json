@@ -1,5 +1,90 @@
 {
-  "newgif": [],
+  "newgif": [
+    [
+      "CgADAQADTgADuSOARgZluHxEVGEjAg",
+      "16563"
+    ],
+    [
+      "CgADAQADcwQAAnB1kwkmMrknlBVAcAI",
+      "55235"
+    ],
+    [
+      "CgADAQADJQADLKdwREaFJXTAUgvnAg",
+      "22207"
+    ],
+    [
+      "CgADAQADTwADuSOARiG5VTT9thW4Ag",
+      "16986"
+    ],
+    [
+      "CgADAQADUAADuSOARqDiZfZxFYVUAg",
+      "161888"
+    ],
+    [
+      "CgADAgADwAAD1xFoSkojQTWW1EpNAg",
+      "77626"
+    ],
+    [
+      "CgADAgADUQEAAj2q8Ev-RKOeFzPKAgI",
+      "127257"
+    ],
+    [
+      "CgADAQADUQADuSOARhl37cdoUC1YAg",
+      "49902"
+    ],
+    [
+      "CgADAQADMgADSzoJRPF2FgABZN7wlwI",
+      "203748"
+    ],
+    [
+      "CgADAQADAwADUIf4RowBqI3P1EMlAg",
+      "145137"
+    ],
+    [
+      "CgADAQADKgADhMeBRoW76SRwl_TnAg",
+      "26003"
+    ],
+    [
+      "CgADAQADNQADnjlwRjnz96EVYyTvAg",
+      "37985"
+    ],
+    [
+      "CgADAQADTQADuSOARvJx0U5fwrqmAg",
+      "41287"
+    ],
+    [
+      "CgADAQADKwADEk9BR4BoXQJDkWkpAg",
+      "58430"
+    ],
+    [
+      "CgADAQADKgADEk9BR3dh3Xw_pmiGAg",
+      "45013"
+    ],
+    [
+      "CgADAQADKAADEk9BR6PP5uHguFUlAg",
+      "51688"
+    ],
+    [
+      "CgADAQADHQADEk9BRy58qGkgwgsQAg",
+      "23669"
+    ],
+    [
+      "CgADAQADHAADEk9BR4D0ZOIMHYRXAg",
+      "21035"
+    ],
+    [
+      "CgADAQADFAADEk9BR6-0SlNuZB-TAg",
+      "71723"
+    ],
+    [
+      "CgADAQADHAADHJH4Rjxpg_bI5mtIAg",
+      "31798"
+    ],
+    [
+      "CgADAQADMAADuSOARscbRi--vgYYAg",
+      "2536416"
+    ]
+  ],
   "ckdgif": [
     [
       "CgADAQADNgADdWARRUuBKGcDK9TzAg",
@@ -391,25 +476,25 @@
     ]
   ],
   "lastgif": [
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "0",
-    "84",
-    "49",
-    "72",
-    "33"
+    "43",
+    "81",
+    "68",
+    "37",
+    "27",
+    "73",
+    "17",
+    "19",
+    "27",
+    "89",
+    "74",
+    "88",
+    "76",
+    "38",
+    "3",
+    "30",
+    "63",
+    "58",
+    "62"
   ],
   "tumblrlist": [
     [
@@ -418,14 +503,6 @@
     ]
   ],
   "tumblrgif": [
-    "http://78.media.tumblr.com/e8d72284a12378cff2af7852cefc3553/tumblr_osk4b7uMnv1ucfwa4o1_400.gif",
-    "http://78.media.tumblr.com/4204a832b12e1c444bd7b175a0ad98f3/tumblr_oytdimY7wk1umd8wto1_500.gif",
-    "http://78.media.tumblr.com/24f58b634baafdef4aea2b260214b6f9/tumblr_nglbx4qQKG1r7eta3o1_500.gif",
-    "http://78.media.tumblr.com/27fc015beb44f64a6b6734eefc4cd3f5/tumblr_nteamb9ElN1r7eta3o1_500.gif",
-    "http://78.media.tumblr.com/a32da13f00fa2cb32281db5d6b658148/tumblr_oy8junTtDK1u578vho1_500.gif",
-    "http://78.media.tumblr.com/04ce0ed37cbf34da18782f49a8b3765d/tumblr_oy8junTtDK1u578vho2_400.gif",
-    "http://78.media.tumblr.com/0ed0b852ffe369da72c6f9c77db003f4/tumblr_n7bo4cJTGR1tdjtzjo3_r1_500.gif",
-    "http://78.media.tumblr.com/2866fec1eb1b2a51241ded92b700e854/tumblr_oudwxkLIN91w7iw2uo1_500.gif",
     "http://78.media.tumblr.com/ac3084bd0ccb76aa2f6eb20eaf803d0c/tumblr_otnyiiEkFA1r352jbo1_500.gif",
     "http://78.media.tumblr.com/5a7c7e387fc80a32a3c87ff27a05dba0/tumblr_nrhas3eeq71s3ogwto1_500.gif",
     "http://78.media.tumblr.com/b6fd0d5fa641af1bd96cb657c4a4151c/tumblr_nrb9ciHCzR1u9sycbo1_500.gif",
