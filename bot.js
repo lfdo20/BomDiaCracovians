@@ -6,7 +6,7 @@ var dotenv   = require('dotenv');
 var Dropbox  = require('dropbox');
 
 //local setup
-  dotenv.load();
+  //dotenv.load();
 
 // Telegram api config
   var Bot = require('node-telegram-bot-api'),  bot = new Bot(process.env.BOT_TOKEN, { polling: true });
@@ -104,16 +104,35 @@ var Dropbox  = require('dropbox');
     "E respondo todos os bom dias com ou sem frases.." +"\n"+
     'mas ainda não entendo coisas loucas tipo "buónday".' +"\n"+
     "\n"+
-    "\\bdcstatus - para ver a quantidades de bom dias no banco." +"\n"+
-    "\\bdcultimos - para ver os ultimos bom dias adicionados" +"\n";
+    "\\bdcstatus - Ver a quantidades de bom dias no banco." +"\n"+
+    "\\bdcadmin - Ver comandos de administração." +"\n"+
+    "\\bdcultimos - Ver os ultimos bom dias adicionados" +"\n";
     bot.sendMessage(msg.chat.id, text).then(function () {
       // reply sent!
     });
   });
 
+  bot.onText(/^\/bdcadmin\s(.+)$/, function (msg, match) {
+    if (match[1] === process.env.ADM_PASS) {
+      var text =
+      "Comandos de manutenção:" +"\n"+
+      "\n"+
+      "\\bdccheck - Checar e validar os gifs recebidos. (X = quantidade)" +"\n"+
+      "\\bdcsave - Salvar os arquivos de dados. (data | gif) " +"\n";
+      bot.sendMessage(msg.chat.id, text).then(function () {
+        // reply sent!
+      });
+    }else{
+    var text = 'Senha errada.'
+      bot.sendMessage(msg.chat.id, text).then(function () {
+        // reply sent!
+      });
+    }
+  });
+
 // Recebimento de gifs putaria e contagem
   bot.on('document', (msg) => {
-    if (nowDay === 'Sat') { // check is is Fri
+    if (nowDay === 'Fri') { // check is is Fri
       if (msg.document.mime_type === 'video/mp4') {
         //console.log(msg.document);
         //var gifthumb = 'https://api.telegram.org/file/bot'+token+'/'+msg.document.thumb.file_path;
@@ -139,7 +158,7 @@ var Dropbox  = require('dropbox');
 // função para lembrar que vai começar a putaria
   var endputsaid=0;
   function putariaRemenber(msg, faltam){
-    console.log(faltam);
+    //console.log(faltam);
     if (faltam <= 60&& endputsaid===0) {
       bot.sendMessage(msg.chat.id, 'Faltam '+faltam+ ' minutos para acabar a putaria! 😭😭 ').then(function () {
         endputsaid=2;
@@ -430,7 +449,12 @@ var Dropbox  = require('dropbox');
 
 // comando para verificar bom dias
   bot.onText(/^\/bdcstatus$|^\/bdcstatus@bomdiacracobot$/, function (msg, match) {
-    bot.sendMessage(msg.chat.id, 'Nós temos '+bddata.bomdia.length+' bom dias.').then(function () {
+    var text = 'Nós temos '+bddata.bomdia.length+' bom dias.'+'\n'+
+    'Nós temos '+gifdata.ckdgif.length+' gifs.'+'\n'+
+    'Nós temos '+bddata.newgif.length+' novos gifs para validar.'+'\n'+
+    'Nós temos '+bddata.tumblrlist.length+' tumbler links.'+'\n'+
+    ' '+'\n';
+    bot.sendMessage(msg.chat.id, text).then(function () {
       // reply sent!
     });
   });
@@ -510,7 +534,7 @@ var Dropbox  = require('dropbox');
 
 // checa se a frase de bom dia recebido já existe no banco
   function checkBdData(path, newBdia, origem){
-    console.log(newBdia, origem);
+    //console.log(newBdia, origem);
     if (origem ==='gif') {
       var existe = gifdata.ckdgif.findIndex(function(elem){
         //console.log(elem[1], newBdia);
