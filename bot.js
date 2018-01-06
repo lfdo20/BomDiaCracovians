@@ -492,7 +492,7 @@ var Dropbox  = require('dropbox');
     //Armazena ultimo bom dia falado
     function saveLastSay(){
       bddata.latebdsay.shift();
-      bddata.latebdsay.push(bdiaback);
+      bddata.latebdsay.push(newBdia);
     }
 
     //Armazena ultimo bom dia recebido
