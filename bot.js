@@ -323,7 +323,7 @@ var Twit = require('twit');
   var newgfcheck = function(msg){
     if (gifdata.newgif.length>0 && checknum>0) {
       ckgfid = gifdata.newgif[0][0];
-      var uri = 'https://api.telegram.org/bot'+token+'/getFile?file_id='+ckgfid;
+      var uri = 'https://api.telegram.org/bot'+process.env.BOT_TOKEN+'/getFile?file_id='+ckgfid;
       request.get(uri,  { json: true }, function(err, res, body){
         console.log(body.result);
         ckgfsize=body.result.file_size;
@@ -554,7 +554,9 @@ var Twit = require('twit');
     }
 
     bot.sendMessage(msg.chat.id, bdiaback).then(function () {
-      newTwit(bdiaback);
+      if (newBdia !== undefined) {
+        newTwit(bdiaback);
+      }
     });
   });
 
