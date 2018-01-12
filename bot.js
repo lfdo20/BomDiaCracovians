@@ -554,7 +554,9 @@ var Twit = require('twit');
     }
 
     bot.sendMessage(msg.chat.id, bdiaback).then(function () {
-      newTwit(bdiaback);
+      if (newBdia !== undefined) {
+        newTwit(bdiaback);
+      }
     });
   });
 
