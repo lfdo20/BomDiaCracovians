@@ -4,6 +4,7 @@ var request  = require('request');
 var feed     = require('feed-read');
 var dotenv   = require('dotenv');
 var Dropbox  = require('dropbox');
+var Twit = require('twit');
 
 //local setup
   //dotenv.load();
@@ -24,7 +25,7 @@ var Dropbox  = require('dropbox');
   var nowDay = moment().format('ddd');
   var nowTime = moment();
   var sTime = new moment('14:00', 'HHmm'); // 14:00
-  var eTime = new moment('23:59', 'HHmm'); // 14:00
+  var eTime = new moment('23:59', 'HHmm'); // 23:59
 
 // Dropbox Config
   var dbx = new Dropbox({
@@ -33,6 +34,17 @@ var Dropbox  = require('dropbox');
     accessToken: process.env.DROPBOX_TOKEN,
     sandbox: false
   });
+
+// Twitter Integration
+  var T = new Twit({
+    consumer_key:         process.env.TWITTER_CONSUMER,
+    consumer_secret:      process.env.TWITTER_CONSUMER_SECRET,
+    access_token:         process.env.TWITTER_TOKEN,
+    access_token_secret:  process.env.TWITTER_TOKEN_SECRET,
+    timeout_ms:           60*1000,  // optional HTTP request timeout to apply to all requests.
+  });
+  var streamTwit = T.stream('user');
+  streamTwit.on('tweet', tweetReply);
 
 // Seção de Notas
   // IDEA: organizar como o bot será utilizado em vários grupos: arquivos diferentes ? mesclar bases de dados ?
@@ -340,16 +352,29 @@ var Dropbox  = require('dropbox');
   });
 
 // comando para analisar várias mensagens recebidas e distribuir as funções
-  var putexec = false;
+  var putexec = false, putstartcheck=false, vcmsg='';
   bot.on( 'message', (msg) => {
     if (nowDay === 'Fri') {
         var putariaCalc = (function(msg) {
           return function(msg) {
             if (!putexec) {
               var timeS = moment.unix(msg.date).format("HH");
-              if (timeS= '23') {
+              if (timeS === '23') {
                 var faltam = Math.abs(moment().diff(eTime, 'minute'));
                 putariaRemenber(msg, faltam);
+              }else if (timeS === '13') { //13
+                //var timeS = moment.unix(msg.date).format("mm");
+                var faltam = moment().diff(new moment('14:00', 'HHmm'), 'minute')*-1;
+                console.log('t3 ', faltam); //sTime
+                if (faltam < 30 && faltam > 0 && !putstartcheck) {
+                  putstartcheck=true;
+                  vcmsg=msg.chat.id;
+                  console.log(msg, vcmsg, timeS, faltam);
+                  setTimeout((msg, faltam)=>{
+                    bot.sendAudio(vcmsg, 'CQADAQADCgAD9MvIRuM_NpJIg6-YAg'); //msg.chat.id
+                    setTimeout(()=>{ putstartcheck=false;},60000);
+                  },(faltam*60)*1000);
+                }
               }
               putexec = true;
               setTimeout(()=>{ putexec = false;},3000);
@@ -451,8 +476,8 @@ var Dropbox  = require('dropbox');
   bot.onText(/^\/bdcstatus$|^\/bdcstatus@bomdiacracobot$/, function (msg, match) {
     var text = 'Nós temos '+bddata.bomdia.length+' bom dias.'+'\n'+
     'Nós temos '+gifdata.ckdgif.length+' gifs.'+'\n'+
-    'Nós temos '+bddata.newgif.length+' novos gifs para validar.'+'\n'+
-    'Nós temos '+bddata.tumblrlist.length+' tumbler links.'+'\n'+
+    'Nós temos '+gifdata.newgif.length+' novos gifs para validar.'+'\n'+
+    'Nós temos '+gifdata.tumblrlist.length+' tumbler links.'+'\n'+
     ' '+'\n';
     bot.sendMessage(msg.chat.id, text).then(function () {
       // reply sent!
@@ -462,7 +487,7 @@ var Dropbox  = require('dropbox');
 // NOTE: buscar um novo algoritmo randomGif
 
 // listen de bom dias
-  var bdrx = /^(((bo|bu)(\w+)?)(\s?)((di|de|dj)\w+))(\s?|\.+|,|!)?(\s)?(.+)?$/gi;
+  var bdrx = /^(((bo|bu)(\w+)?)(\s?)((di|de|dj)\w+))(\s?|\.+|,|!|\?)?(\s)?(.+)?$/gi;
   bot.onText(bdrx, function (msg, match) {
     newbdv = match[1];
     newptv = match[8];
@@ -529,8 +554,49 @@ var Dropbox  = require('dropbox');
     }
 
     bot.sendMessage(msg.chat.id, bdiaback).then(function () {
+      newTwit(bdiaback);
     });
   });
+
+// Twitter sender
+  function newTwit(status){
+    T.post('statuses/update', { status: status }, function(err, data, response) {
+    });
+  }
+
+// Twitter Replyer
+  var bdrxtw = /^(@\w+\s)(((bo|bu)(\w+)?)(\s?)((di|de|dj)\w+))(\s?|\.+|,|!|\?)?(\s)?(.+)?$/gi;
+  function tweetReply(tweet) {
+    //if (!moment().isBetween(sTime, eTime, 'minute', '[]')) {
+    var reply_to = tweet.in_reply_to_screen_name; // Who is this in reply to?
+    var name = tweet.user.screen_name; // Who sent the tweet?
+    var txt = tweet.text;// What is the text?
+    var match = bdrxtw.exec(txt);
+
+    if (name !== 'bomdiaabot' && match !== null) {
+
+      // receber bom dia do twitter
+      var newbdvtw = match[2];
+      var newptvtw = match[9];
+      var newBdiatw = match[11];
+      checkBdData(bddata.bomdia, newBdiatw, 'bomdia');
+      checkBdvData(newbdvtw);
+
+      // enviar bom dia aleatória a um reply do twitter
+      var bdnum = Math.floor(Math.random() * bddata.bomdia.length);
+      var bdvnum = Math.floor(Math.random() * bddata.bdiasvar.length);
+      var ptvnum = Math.floor(Math.random() * bddata.pontosvar.length);
+      var bdiaback = bddata.bdiasvar[bdvnum] + bddata.pontosvar[ptvnum] + bddata.bomdia[bdnum];
+      var reply = '@'+name+' '+bdiaback;
+      T.post('statuses/update', { status: reply }, function(err, reply) {
+        if (err !== undefined) {
+          console.log(err);
+        } else {
+          console.log('Tweeted: ' + reply);
+        }
+      });
+    }
+  }
 
 // checa se a frase de bom dia recebido já existe no banco
   function checkBdData(path, newBdia, origem){
