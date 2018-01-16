@@ -1,7 +1,7 @@
 var fs       = require('fs');
 var moment   = require('moment');
 var request  = require('request');
-var feed     = require('feed-read');
+//var feed     = require('feed-read');
 var dotenv   = require('dotenv');
 var Dropbox  = require('dropbox');
 var Twit = require('twit');
@@ -14,7 +14,7 @@ var Twit = require('twit');
 
 // Global Var
   let bddata={}, newBdia, newbdv, newptv, newBdiaCount=0, newgifCount=0, rgifcount=0;
-  let dropfilesurl = [['https://www.dropbox.com/s/v41eatqgawwso3z/data.json','data.json','bddata'],['https://www.dropbox.com/s/1xpbz9xhrho6bzy/gifdata.json','gifdata.json', 'gifdata']];
+  let dropfilesurl = [[process.env.DROP_DATA,'data.json','bddata'],[process.env.DROP_GIF,'gifdata.json', 'gifdata']];
   let gifdata={
     'newgif':[],
     'ckdgif':[],
@@ -22,8 +22,7 @@ var Twit = require('twit');
   };
 
 // Time config
-  var nowDay = moment().format('ddd');
-  var nowTime = moment();
+  var nowDay = () => moment().format('ddd');
   var sTime = new moment('14:00', 'HHmm'); // 14:00
   var eTime = new moment('23:59', 'HHmm'); // 23:59
 
@@ -144,7 +143,7 @@ var Twit = require('twit');
 
 // Recebimento de gifs putaria e contagem
   bot.on('document', (msg) => {
-    if (nowDay === 'Fri') { // check is is Fri
+    if (nowDay() === 'Fri') { // check is is Fri
       if (msg.document.mime_type === 'video/mp4') {
         //console.log(msg.document);
         //var gifthumb = 'https://api.telegram.org/file/bot'+token+'/'+msg.document.thumb.file_path;
@@ -156,7 +155,7 @@ var Twit = require('twit');
         if (rgifcount > 3) {
           if (moment().isBetween(sTime, eTime, 'minute', '[]')) {
             randomGif(msg);
-            rgifcount=0;
+            rgifcount = 0;
           }
         }
       }
@@ -168,126 +167,159 @@ var Twit = require('twit');
 // NOTE: data não está detectando o dia após meia noite.
 
 // função para lembrar que vai começar a putaria
-  var endputsaid=0;
-  function putariaRemenber(msg, faltam){
+  var endputsaid = 0;
+  function putariaRemenber(msg, faltam) {
     //console.log(faltam);
-    if (faltam <= 60&& endputsaid===0) {
+    if (faltam <= 60 && endputsaid === 0) {
       bot.sendMessage(msg.chat.id, 'Faltam '+faltam+ ' minutos para acabar a putaria! 😭😭 ').then(function () {
         endputsaid=2;
       });
-    }else if (faltam <= 20&& endputsaid===2) {
+    } else if (faltam <= 20 && endputsaid === 2) {
       bot.sendMessage(msg.chat.id, 'Faltam '+faltam+' minutos para acabar a putaria! 😱😱 ').then(function () {
         endputsaid=4;
       });
-    }else if (faltam <=1 ||faltam > 60 && endputsaid!==0) {endputsaid=0; }
+    } else if (faltam <= 1 || faltam > 60 && endputsaid !== 0) { endputsaid = 0; }
   }
 
+// comando para gifd tumblrs teste
+    bot.onText(/^(pootaria)$/gi, function (msg, match) {
+      // const uri = 'http://www.tumblviewr.com/Tumblr/Blog/goodgirlscangobad';
+      // request(uri, function(err, res, body) {
+      //   if (err) {console.log(err);}
+      //   //console.log(body);
+      //    var rgifl=[], rgiflist=[];
+      //   body.replace(rgifrx, (match, p1, p2) => {
+      //     //console.log(match, p1, p2);
+      //     rgiflist.push(match);
+      //     console.log(rgiflist);
+      //   });
+      // });
+      randomGif(msg);
+    });
 
 // comando para gifs putaria
-  var gftagrx = /^(.+)?(p(u|o)+taria+)(.+)?$/gi;
-  bot.onText(gftagrx, function (msg, match) {
-    if (nowDay !== 'Fri') { // Correto é Fri
+  var gftagrxdays = /^(p(u|o)+taria+)$/gi;
+  var gftagrxfri = /^(.+)?(p(u|o)+taria+)(.+)?$/gi;
+  var gftagrx = () => nowDay() === 'Fri' ? gftagrxfri : gftagrxdays;
+  bot.onText(gftagrx(), function (msg, match) {
+    if (nowDay() !== 'Fri') { // Correto é Fri
       bot.sendMessage(msg.chat.id, 'Hoje não é dia né. Tá achando que putaria é bagunça!?').then(function () {
       });
-    }else{
+    } else {
       if (!moment().isBetween(sTime, eTime, 'minute', '[]')) {
         var faltam = Math.abs(moment().diff(sTime, 'minute'));
-          faltam = faltam>60 ? Math.round(faltam/60) +' h e ' + faltam % 60 +' min' : faltam+' min';
-        bot.sendMessage(msg.chat.id, 'Caaaaalma, faltam '+faltam+' para começar a putaria!').then(function () {
+          faltam = faltam > 60 ? `${Math.floor(faltam/60)} h e ${faltam % 60} min` : `${faltam} min`;
+
+        bot.sendMessage(msg.chat.id, `Caaaaalma, faltam ${faltam} para começar a putaria!`).then(function () {
         });
       }else{
-
-      for (var i = 0; i < gifdata.ckdgif.length; i++) {
-        var gfid, gifnum = Math.floor(Math.random() * gifdata.ckdgif.length);
-        gifdata.lastgif.findIndex(function(str){
-          if (str !== gifnum) {
-            gfid = gifdata.ckdgif[gifnum][0];
-          }else{
-            return;
-          }
-        });
-        if (gfid !== undefined) {
-          bot.sendDocument(msg.chat.id, gfid).then(function () {
-            gifdata.lastgif.shift();
-            gifdata.lastgif.push(gifnum.toString());
-            //console.log(gifdata.lastgif[18],gifnum.toString());
-            newgifCount +=1;
-            rgifcount+=1;
-            if(newgifCount >= 5){
-              //console.log(gifdata.lastgif);
-              saveNewdata(gifdata);
-              newgifCount=0;
+        const gifrand = () => { return Math.floor(Math.random() * gifdata.ckdgif.length).toString()}
+        function teste(cb) {
+          gifdata.ckdgif.find((x) => {
+            const gifNum = gifrand();
+            if (gifdata.lastgif.every(y => y !== gifNum)) {
+              gifdata.lastgif.shift();
+              gifdata.lastgif.push(gifNum.toString());
+              return cb = gifdata.ckdgif[gifNum][0];
             }
           });
-          i = gifdata.ckdgif.length+1;
-
+          return cb;
+        }
+        let gifId = teste();
+        if (gifId !== undefined) {
+          bot.sendDocument(msg.chat.id, gifId).then(() => {
+            newgifCount += 1;
+            rgifcount += 1;
+            if(newgifCount >= 5) {
+              saveNewdata(gifdata);
+              newgifCount = 0;
+            }
+          });
           }
         }
         }
-      }
   });
 
 // NOTE: tumblr list pequena, feed parser com problema e só detecta alguns tumblrs
 
 // função para putarias random tumblr
-  var uri, ix=0, rgifrx =/(\<img src\=\")(h\S+gif(?!\"\/\<br))("\/\>)/gi;
+  var uri, ix = 0, rgifrx =/(h\S+\.gif(?!\'\)))/gi; ///(\<img src\=\")(h\S+gif(?!\"\/\<br))("\/\>)/gi;
   function randomGif(msg){
     //console.log(gifdata.tumblrgif.length);
-    if (gifdata.tumblrgif.length >0) {
-      bot.sendDocument(msg.chat.id, gifdata.tumblrgif[0]).then(function() {
+    if (gifdata.tumblrgif.length > 0) {
+      bot.sendDocument(msg.chat.id, gifdata.tumblrgif[0]).then(() => {
+        //console.log('foi');
         gifdata.tumblrgif.shift();
-        rgifcount=0;
+        rgifcount = 0;
       });
     }else{
       if (gifdata.tumblrgif.length === 0) {
         getlink();
         function getlink(){
-          if (ix < gifdata.tumblrlist.length) {
+          //ix = gifdata.tumblrgif[gifdata.tumblrgif.length];
+          //if (ix < gifdata.tumblrlist.length) {
             uri = gifdata.tumblrlist[ix][0].toString();
             //console.log('rgif : '+ix+' & '+uri);
-            getFeed(uri,ix).then(function(){ });
-            ix = ix+1;
-            //console.log(ix);
-          }
+            getFeed(uri,ix).then(function(ix){
+
+            });
+          //}
         }
         function getFeed(uri, ix){
-          return new Promise(function(resolve, reject){
-            feed(uri, function(err, fed) {
+          return new Promise((resolve, reject) => {
+
+            request(uri, function(err, res, body) {
               if (err) {console.log(err);}
-              //console.log(fed.length);
-              var newpost = new moment(fed[fed.length-1].published);
-              //console.log(gifdata.tumblrlist[ix][1]);
-              var oldpost = new moment(gifdata.tumblrlist[ix][1].toString(), 'MMM DD YYYY');
-              //console.log(newpost, oldpost);
-              if (newpost > oldpost) {
-                //console.log('ok novos posts');
-                var rgifl=[], rgiflist=[],rtemp;
-                //console.log(fed.length);
-                for (var j = 0; j < fed.length; j++) {
-                  rgifl += fed[j].content;
-                }
-                //console.log(rgifl);
-                rgifl.replace(rgifrx, function(match, p1,p2){
-                  //console.log(match, p1, p2);
-                  gifdata.tumblrgif.push(p2);
-                });
-                //console.log(gifdata.tumblrgif);
-                //console.log(fed[fed.length-1].published);
-                gifdata.tumblrlist[ix].pop();
-                gifdata.tumblrlist[ix].push(fed[fed.length-1].published.toString().match(/(\w{3} \d{2} \w{4})/g, '$1').toString());
-                ix = gifdata.tumblrlist.length+1;
-                //console.log(gifdata.tumblrlist);
-                //console.log(gifdata.tumblrgif);
+              body.replace(rgifrx, (match, p1, p2) => {
+                gifdata.tumblrgif.push(match);
+              });
+
+              bot.sendDocument(msg.chat.id, gifdata.tumblrgif[0]).then(() => {
+                gifdata.tumblrgif.shift();
+                rgifcount = 0;
+                ix = ix+1;
+                gifdata.tumblrlist.pop();
+                gifdata.tumblrlist.push(ix.toString());
                 saveNewdata(gifdata);
-                bot.sendDocument(msg.chat.id, gifdata.tumblrgif[0]).then(function() {
-                  gifdata.tumblrgif.shift();
-                  rgifcount=0;
-                });
-              }else{
-                //console.log('ok no posts');
-                getlink(ix);
-              }
+              });
             });
+
+            // feed(uri, function(err, fed) {
+            //   if (err) {console.log(err);}
+            //   //console.log(fed.length);
+            //   var newpost = new moment(fed[fed.length-1].published);
+            //   //console.log(gifdata.tumblrlist[ix][1]);
+            //   var oldpost = new moment(gifdata.tumblrlist[ix][1].toString(), 'MMM DD YYYY');
+            //   //console.log(newpost, oldpost);
+            //   if (newpost > oldpost) {
+            //     //console.log('ok novos posts');
+            //     var rgifl=[], rgiflist=[], rtemp;
+            //     //console.log(fed.length);
+            //     for (var j = 0; j < fed.length; j++) {
+            //       rgifl += fed[j].content;
+            //     }
+            //     //console.log(rgifl);
+            //     rgifl.replace((rgifrx, match, p1, p2) => {
+            //       //console.log(match, p1, p2);
+            //       gifdata.tumblrgif.push(p2);
+            //     });
+            //     //console.log(gifdata.tumblrgif);
+            //     //console.log(fed[fed.length-1].published);
+            //     gifdata.tumblrlist[ix].pop();
+            //     gifdata.tumblrlist[ix].push(fed[fed.length-1].published.toString().match(/(\w{3} \d{2} \w{4})/g, '$1').toString());
+            //     ix = gifdata.tumblrlist.length+1;
+            //     //console.log(gifdata.tumblrlist);
+            //     //console.log(gifdata.tumblrgif);
+            //     saveNewdata(gifdata);
+            //     bot.sendDocument(msg.chat.id, gifdata.tumblrgif[0]).then(() => {
+            //       gifdata.tumblrgif.shift();
+            //       rgifcount = 0;
+            //     });
+            //   } else {
+            //     //console.log('ok no posts');
+            //     getlink(ix);
+            //   }
+            // });
           });
         }
       }
@@ -310,7 +342,7 @@ var Twit = require('twit');
 
 // comandos para checar os gifs
   var ckgfid='', ckgfsize='', ckgfthlink='', checknum='';
-  var endkeyboard = function(msg){
+  var endkeyboard = (msg) => {
     saveNewdata(gifdata);
     bot.sendMessage(msg.chat.id, 'Acabou.', {
       "reply_to_message_id": msg.message_id,
@@ -320,8 +352,8 @@ var Twit = require('twit');
       }
     });
   }
-  var newgfcheck = function(msg){
-    if (gifdata.newgif.length>0 && checknum>0) {
+  var newgfcheck = (msg) => {
+    if (gifdata.newgif.length > 0 && checknum > 0) {
       ckgfid = gifdata.newgif[0][0];
       var uri = 'https://api.telegram.org/bot'+process.env.BOT_TOKEN+'/getFile?file_id='+ckgfid;
       request.get(uri,  { json: true }, function(err, res, body){
@@ -354,7 +386,7 @@ var Twit = require('twit');
 // comando para analisar várias mensagens recebidas e distribuir as funções
   var putexec = false, putstartcheck=false, vcmsg='';
   bot.on( 'message', (msg) => {
-    if (nowDay === 'Fri') {
+    if (nowDay() === 'Fri') {
         var putariaCalc = (function(msg) {
           return function(msg) {
             if (!putexec) {
@@ -418,7 +450,7 @@ var Twit = require('twit');
     var tp1 = match[6]; //dia
     var tp2 = match[11] // q que ou hoje
     if (tp1==='dia' && tp2.match(/^(q|que|hoje|hj)$/)) {
-      switch (nowDay) {
+      switch (nowDay()) {
         case 'Sun':
           hjmessage =
           "🍰🍷 DOMINGO MIÇANGUEIRO CREATIVO DA POHRA 🎨"+"\n"+

@@ -1,6 +1,13 @@
 
 # Created by https://www.gitignore.io/api/node
 
+
+### Files ###
+
+bot_ES6.js
+.eslintrc.js
+.editorconfig
+
 ### Node ###
 # Logs
 logs
